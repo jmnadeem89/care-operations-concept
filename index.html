@@ -1,0 +1,1285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Care Operations Control Centre</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: left rail nav + one working pane; case queue | case detail split on wide screens, stacked on phones */
+:root{
+  --bg:#f3f6f4;--surface:#ffffff;--surface-2:#eaf0ed;--line:#cfd9d4;--line-strong:#71857c;
+  --ink:#14231d;--muted:#4a5c54;--accent:#1d5c4d;--accent-ink:#ffffff;--accent-soft:#dcece5;--focus:#1d5c4d;
+  --good:#1e6a3a;--good-soft:#e1f1e6;--warn:#7d5200;--warn-soft:#fbeed3;--bad:#a12c2c;--bad-soft:#fae4e2;--info:#2a5596;--info-soft:#e4ecf8;
+  --rail:#163f35;--rail-ink:#e7f1ec;--rail-muted:#b7cec4;--rail-active:#2a5c4f;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1613;--surface:#15201c;--surface-2:#1b2924;--line:#2e3f39;--line-strong:#5d756b;
+  --ink:#e5eee9;--muted:#a9bbb3;--accent:#7fd3b8;--accent-ink:#0b2019;--accent-soft:#1d3a31;--focus:#7fd3b8;
+  --good:#7fd69a;--good-soft:#173322;--warn:#f0c46a;--warn-soft:#3a2d12;--bad:#f2a19a;--bad-soft:#3d1d1b;--info:#9ec0f2;--info-soft:#1b2a40;
+  --rail:#0b1210;--rail-ink:#e5eee9;--rail-muted:#a9bbb3;--rail-active:#1d3a31;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1613;--surface:#15201c;--surface-2:#1b2924;--line:#2e3f39;--line-strong:#5d756b;
+  --ink:#e5eee9;--muted:#a9bbb3;--accent:#7fd3b8;--accent-ink:#0b2019;--accent-soft:#1d3a31;--focus:#7fd3b8;
+  --good:#7fd69a;--good-soft:#173322;--warn:#f0c46a;--warn-soft:#3a2d12;--bad:#f2a19a;--bad-soft:#3d1d1b;--info:#9ec0f2;--info-soft:#1b2a40;
+  --rail:#0b1210;--rail-ink:#e5eee9;--rail-muted:#a9bbb3;--rail-active:#1d3a31;color-scheme:dark}
+html.hc{--muted:var(--ink);--line:var(--line-strong)}
+html.lg{font-size:118.75%}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:1rem/1.55 var(--font-body);margin:0}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.25}
+h1{font-size:1.75rem;font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.15rem;font-weight:600}
+h3{font-size:1rem;font-weight:600}
+p{margin:0}
+a{color:var(--accent)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.55}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:4px}
+h1[tabindex="-1"]:focus,h2[tabindex="-1"]:focus,main:focus{outline:none}
+.mono{font-family:var(--font-mono);font-size:.9em}
+.muted{color:var(--muted)}
+.small{font-size:.875rem}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.skip{position:absolute;left:-999px;top:8px;background:var(--surface);padding:8px 12px;border:2px solid var(--focus);z-index:50}
+.skip:focus{left:max(16px,env(safe-area-inset-left,0px))}
+
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+.rail{background:var(--rail);color:var(--rail-ink);padding-block:24px;padding-inline:16px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{font-weight:700;font-size:1.05rem;letter-spacing:-.01em}
+.brand small{display:block;font-weight:500;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--rail-muted);margin-top:4px}
+.rail nav{display:grid;gap:4px}
+.rail nav a{color:var(--rail-ink);text-decoration:none;padding:10px 12px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.rail nav a:hover{background:var(--rail-active)}
+.rail nav a[aria-current="page"]{background:var(--rail-active);font-weight:600;box-shadow:inset 3px 0 var(--accent)}
+.rail nav .group{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--rail-muted);padding:12px 12px 4px}
+.count{font-family:var(--font-mono);font-size:.75rem;background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:1px 8px}
+.rail-foot{margin-top:auto;font-size:.8125rem;color:var(--rail-muted);display:grid;gap:10px}
+.rail-foot button{background:transparent;border:1px solid var(--rail-muted);color:var(--rail-ink);border-radius:6px;padding:8px 10px;text-align:left}
+.rail-foot button[aria-pressed="true"]{background:var(--rail-active);border-color:var(--rail-ink)}
+
+main{padding-block:0 48px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));min-width:0}
+.banner{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;padding-block:12px;border-bottom:1px solid var(--line);font-size:.875rem;color:var(--muted)}
+.banner strong{color:var(--ink)}
+.page{max-width:1280px;margin:0 auto;display:grid;gap:24px;padding-top:28px}
+.pagehead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px}
+.pagehead p{max-width:68ch;margin-top:6px;color:var(--muted)}
+.eyebrow{font-size:.75rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0}
+.panel>h2,.panel>header{margin-bottom:12px}
+.panel header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.panel header>*{min-width:0;max-width:100%}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.stack{display:grid;gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.between{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+
+.btn{border:1px solid var(--line-strong);background:var(--surface);border-radius:6px;padding:8px 14px;font-weight:500;min-height:40px}
+.btn:hover:not(:disabled){background:var(--surface-2)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.08);background:var(--accent)}
+.btn.quiet{border-color:transparent;background:transparent;text-decoration:underline;text-underline-offset:3px;padding-inline:4px}
+.btn.sm{min-height:32px;padding:4px 10px;font-size:.875rem}
+
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.8125rem;font-weight:600;padding:2px 10px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.p-good{color:var(--good);background:var(--good-soft)}
+.p-warn{color:var(--warn);background:var(--warn-soft)}
+.p-bad{color:var(--bad);background:var(--bad-soft)}
+.p-info{color:var(--info);background:var(--info-soft)}
+.p-neutral{color:var(--muted);background:var(--surface-2)}
+.tag{font-size:.75rem;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.tag.model{color:var(--info);background:var(--info-soft);border-color:transparent}
+.tag.code{color:var(--good);background:var(--good-soft);border-color:transparent}
+.tag.tool{color:var(--warn);background:var(--warn-soft);border-color:transparent}
+.tag.human{color:var(--accent-ink);background:var(--accent);border-color:transparent}
+
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.kpi strong{display:block;font-size:1.6rem;font-variant-numeric:tabular-nums;margin-top:2px}
+.kpi span{font-size:.875rem;color:var(--muted)}
+
+/* Ops */
+.split{display:grid;grid-template-columns:minmax(300px,.85fr) minmax(0,1.4fr);gap:16px;align-items:start}
+.queue{padding:0;overflow:hidden}
+.queue .qtools{padding:14px;display:grid;gap:10px;border-bottom:1px solid var(--line)}
+.queue input[type=search],.field input,.field select,.field textarea,select.sel{width:100%;border:1px solid var(--line-strong);border-radius:6px;padding:8px 10px;background:var(--surface)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:.875rem}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.qlist{list-style:none;margin:0;padding:0}
+.qitem button{width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:var(--surface);padding:12px 14px 12px 18px;display:grid;gap:4px;position:relative}
+.qitem button:hover{background:var(--surface-2)}
+.qitem button[aria-current="true"]{background:var(--accent-soft)}
+.qitem button[aria-current="true"]::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.qitem .prio{position:absolute;left:0;top:0;bottom:0;width:4px}
+.prio-High{background:var(--bad)}.prio-Medium{background:var(--warn)}.prio-Low{background:var(--good)}
+.qitem .t{font-weight:600}
+.qitem .m{font-size:.8125rem;color:var(--muted)}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:0}
+.facts div{border-left:2px solid var(--line);padding-left:10px}
+.facts dt{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.facts dd{margin:2px 0 0;font-weight:500}
+table{border-collapse:collapse;width:100%;font-size:.9375rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.8125rem;color:var(--muted);font-weight:600;background:var(--surface-2)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td.mono,td .mono{white-space:nowrap}
+.tablewrap{overflow-x:auto}
+.trace{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.trace li{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:.9375rem}
+.trace li:last-child{border-bottom:0}
+.callout{border-radius:6px;padding:12px 14px;background:var(--surface-2);border:1px solid var(--line)}
+.callout.warn{background:var(--warn-soft);border-color:transparent}
+.callout.bad{background:var(--bad-soft);border-color:transparent}
+.callout.good{background:var(--good-soft);border-color:transparent}
+.callout.info{background:var(--info-soft);border-color:transparent}
+.diff{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.diff>div{border:1px solid var(--line);border-radius:6px;padding:12px}
+.diff .src{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.field{display:grid;gap:4px}
+.field label,.lbl{font-weight:600;font-size:.875rem}
+textarea{min-height:96px;resize:vertical;line-height:1.5}
+.check{display:flex;gap:8px;align-items:flex-start}
+.check input{width:20px;height:20px;margin-top:2px;accent-color:var(--accent)}
+.empty{padding:24px;text-align:center;color:var(--muted)}
+
+/* Participant */
+.pgrid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,.9fr);gap:16px;align-items:start}
+.budget{display:grid;gap:16px}
+.bignum{font-size:2.6rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.bar{display:flex;height:22px;border-radius:6px;overflow:hidden;border:1px solid var(--line-strong)}
+.bar span{display:block;height:100%}
+.seg-paid{background:var(--accent)}
+.seg-res{background:repeating-linear-gradient(45deg,var(--info) 0 4px,var(--info-soft) 4px 8px)}
+.seg-chk{background:repeating-linear-gradient(-45deg,var(--warn) 0 3px,var(--warn-soft) 3px 7px)}
+.seg-avl{background:var(--surface)}
+.legend{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.legend button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:10px;text-align:left;display:grid;gap:2px}
+.legend button[aria-expanded="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.legend .sw{width:18px;height:12px;border-radius:3px;border:1px solid var(--line-strong);display:inline-block;vertical-align:middle;margin-right:6px}
+.legend strong{font-variant-numeric:tabular-nums;font-size:1.1rem}
+.inv{list-style:none;margin:0;padding:0}
+.inv li button{width:100%;text-align:left;display:grid;grid-template-columns:1fr auto;gap:4px 12px;border:0;border-top:1px solid var(--line);background:var(--surface);padding:12px 4px}
+.inv li button:hover{background:var(--surface-2)}
+.chat{display:grid;gap:12px}
+.log{display:grid;gap:10px;max-height:460px;overflow:auto;padding-right:4px}
+.msg{border-radius:12px;padding:10px 14px;border:1px solid var(--line);background:var(--surface-2);max-width:96%;font-size:1.0625rem}
+.msg.user{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);justify-self:end}
+.msg .who{font-size:.75rem;font-weight:700;display:block;margin-bottom:2px}
+.msg .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.prompts{display:flex;flex-wrap:wrap;gap:6px}
+.prompts button{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:.875rem}
+.chatform{display:grid;grid-template-columns:1fr auto;gap:8px}
+.chatform input{border:1px solid var(--line-strong);border-radius:6px;padding:8px 10px;background:var(--surface);min-width:0}
+.steps{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.steps li{font-size:.8125rem;padding:2px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.steps li.done{background:var(--good-soft);color:var(--good);border-color:transparent;font-weight:600}
+.steps li.now{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600}
+.easy p{font-size:1.15rem;line-height:1.7}
+.agent-head{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}
+.agent-head .row{grid-column:1/-1}
+.av{flex-shrink:0;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);transition:box-shadow .2s}
+.av svg{display:block}
+.av .mouth{transform-box:fill-box;transform-origin:center}
+.av .eye{transform-box:fill-box;transition:transform .2s}
+.av[data-state="speaking"] .mouth{animation:talk .26s ease-in-out infinite alternate}
+.av[data-state="thinking"] svg{transform:rotate(-5deg)}
+.av svg{transition:transform .3s}
+.av .eye{animation:blink 5s infinite}
+.avwrap{position:relative;display:inline-block}
+.aibadge{position:absolute;right:-4px;bottom:-2px;background:var(--info);color:var(--surface);font-size:.6875rem;font-weight:700;padding:1px 6px;border-radius:8px;border:2px solid var(--surface)}
+.choices{display:grid;gap:8px}
+.choices button{text-align:left;padding:12px 14px;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface);font-weight:500;min-height:48px;font-size:1rem}
+.choices button:hover{background:var(--accent-soft)}
+.spot{position:relative;z-index:30;outline:4px solid var(--accent)!important;outline-offset:6px;border-radius:8px;scroll-margin:140px;animation:spotpulse 1.6s ease-in-out 2}
+@keyframes spotpulse{50%{outline-offset:10px}}
+.guide{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100% - 32px));background:var(--surface);border:2px solid var(--accent);border-radius:14px;padding:14px 16px;box-shadow:0 12px 40px rgb(0 0 0 / .28);z-index:45;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:start}
+.guide p{font-size:1.05rem}
+.guide .row{grid-column:1/-1;justify-content:space-between}
+.av[data-state="listening"]{box-shadow:0 0 0 3px var(--accent)}
+@keyframes talk{from{transform:scaleY(.35)}to{transform:scaleY(1.6)}}
+@keyframes blink{0%,95%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
+.msgrow{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:end}
+.msg.staff{background:var(--good-soft);border-color:var(--good)}
+.msg.staff .who{color:var(--good)}
+.typing{display:inline-flex;gap:4px;padding:12px 14px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);width:fit-content}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+
+/* Reports */
+.hbar{display:grid;grid-template-columns:minmax(120px,190px) 1fr auto;gap:8px 12px;align-items:center;font-size:.9375rem}
+.hbar .track{height:14px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.hbar .fill{height:100%;background:var(--accent)}
+.hbar .v{font-variant-numeric:tabular-nums;min-width:3ch;text-align:right}
+
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:.8125rem;border:1px solid var(--line-strong);border-radius:6px;padding:2px 8px;background:var(--surface)}
+.chip b{font-weight:600}
+.chip.cu b{color:var(--info)}.chip.sl b{color:var(--warn)}.chip.sf b{color:var(--accent)}
+.stackbar{display:flex;height:14px;border-radius:3px;overflow:hidden;background:var(--surface-2);min-width:80px}
+.stackbar span{display:block;height:100%}
+.c-ai{background:var(--accent)}.c-tool{background:var(--info)}.c-hum{background:var(--warn)}
+.sw2{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:middle;margin-right:4px}
+.wf{position:relative;height:12px;background:var(--surface-2);border-radius:3px;min-width:120px}
+.wf span{position:absolute;top:0;height:100%;border-radius:3px}
+.rates{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:820px){.rates{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Flow diagram */
+.flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:stretch}
+.node{border:1px solid var(--line-strong);border-radius:8px;padding:12px;background:var(--surface);display:grid;gap:6px;align-content:start;position:relative}
+.node .k{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.node:not(:last-child)::after{content:"→";position:absolute;right:-10px;top:50%;transform:translate(50%,-50%);color:var(--muted);font-weight:700}
+
+dialog{border:1px solid var(--line-strong);border-radius:10px;padding:24px;max-width:640px;width:calc(100% - 32px);background:var(--surface);color:var(--ink)}
+dialog::backdrop{background:rgb(0 0 0 / .45)}
+
+.toast{position:fixed;right:max(20px,env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:8px;max-width:380px;box-shadow:0 8px 30px rgb(0 0 0 / .25);z-index:40}
+
+@media (max-width:1100px){.split,.pgrid{grid-template-columns:1fr}.flow{grid-template-columns:repeat(3,minmax(0,1fr))}.node:nth-child(3n)::after{display:none}}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr}
+  .rail{position:static;height:auto;padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .rail nav{display:flex;flex-wrap:wrap}.rail nav .group{display:none}.rail-foot{flex-direction:row;display:flex;flex-wrap:wrap}
+  main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .kpis,.grid3{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2,.diff{grid-template-columns:1fr}
+  .legend{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:520px){.kpis,.grid3,.flow{grid-template-columns:1fr}.node::after{display:none}.hbar{grid-template-columns:1fr auto}.hbar .track{grid-column:1/-1;order:3}h1{font-size:1.45rem}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+</style>
+
+<a class="skip" href="#main">Skip to main content</a>
+<div class="app">
+  <aside class="rail" aria-label="Sections">
+    <div class="brand">Care Operations<small>Control centre · concept</small></div>
+    <nav id="nav" aria-label="Main">
+      <a href="#start" data-r="start">Start here</a>
+      <span class="group">Operations</span>
+      <a href="#ops" data-r="ops">Case triage <span class="count" id="nav-open">0</span></a>
+      <a href="#health" data-r="health">Salesforce health</a>
+      <span class="group">Participants</span>
+      <a href="#participant" data-r="participant">Participant view</a>
+      <span class="group">Reporting</span>
+      <a href="#exec" data-r="exec">Executive dashboard</a>
+      <a href="#obs" data-r="obs">Agent observability</a>
+      <a href="#reports" data-r="reports">Service report</a>
+      <a href="#access" data-r="access">Accessibility tracker</a>
+      <span class="group">Design</span>
+      <a href="#agents" data-r="agents">How the agents work</a>
+    </nav>
+    <div class="rail-foot">
+      <button id="t-large" aria-pressed="false">Larger text</button>
+      <button id="t-contrast" aria-pressed="false">Higher contrast</button>
+      <button id="t-reset">Reset demo</button>
+    </div>
+  </aside>
+  <main id="main" tabindex="-1">
+    <div class="banner" role="note"><span><strong>Independent concept by Muhammad Nadeem.</strong> Not a Provider Choice product.</span><span>Fictional data · scripted AI · not connected to Salesforce or FLOW · nothing is sent</span></div>
+    <div id="view" class="page"></div>
+  </main>
+</div>
+<div id="live" class="sr" aria-live="polite"></div>
+<div id="toast" class="toast" role="status" hidden></div>
+<section id="guide" class="guide" aria-labelledby="g-h" hidden></section>
+<dialog id="dlg" aria-labelledby="dlg-title"><div id="dlg-body"></div><div class="row" style="margin-top:16px"><button class="btn" id="dlg-close">Close</button></div></dialog>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const aud = n => new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD',maximumFractionDigits:0}).format(n);
+const store = { get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch{ return null; } }, set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} } };
+
+/* ---------- Fictional shared data ---------- */
+const PARTICIPANT = { name:'Alex Morgan', first:'Alex', id:'P-20481' };
+const BUDGET = { period:'1 Oct – 31 Dec 2026', allocated:12000, paid:4200, reserved:1050, checking:390 };
+BUDGET.available = BUDGET.allocated - BUDGET.paid - BUDGET.reserved - BUDGET.checking;
+const INVOICES = [
+  {id:'INV-2101',provider:'Harbour Allied Health',service:'Physiotherapy · 1 hour',date:'8 Nov 2026',amount:150,status:'Paid',bucket:'paid',note:'Paid on 10 Nov 2026.'},
+  {id:'INV-2102',provider:'Harbour Allied Health',service:'Physiotherapy · 1 hour',date:'8 Nov 2026',amount:150,status:'Being checked',bucket:'checking',note:'Looks similar to INV-2101. It may be a separate session. Our team checks before anything is paid.'},
+  {id:'INV-2103',provider:'Bright Path Supports',service:'Community access · 3 hours',date:'Service date to confirm',amount:240,status:'Being checked',bucket:'checking',note:'Waiting for the provider to confirm the service date.'},
+  {id:'INV-2104',provider:'Everyday Mobility',service:'Equipment maintenance',date:'5 Nov 2026',amount:95,status:'Paid',bucket:'paid',note:'Paid on 7 Nov 2026.'}
+];
+
+function seedCases(){
+  return [
+    {id:'CS-4101',kind:'status',subject:'Provider asks why INV-2096 is unpaid',source:'Provider email',participant:'Jordan Lee',invoice:'INV-2096',lines:['2026-08-17','2026-09-14','2026-10-28'],ageH:52,priority:null,status:'New',owner:'Unassigned',
+      fields:[{label:'Provider ABN',value:'51 824 753 556',src:'FLOW invoice record'},{label:'Invoice amount',value:'$310.00',src:'FLOW invoice record'},{label:'Claim status',value:'Submitted · awaiting NDIA',src:'FLOW claim record'},{label:'Participant',value:'Jordan Lee (P-19022)',src:'Salesforce contact'}],
+      draft:'Hi Everyday Mobility, INV-2096 ($310) was submitted for claiming on 6 Nov and is awaiting release of funds. We pay as soon as funds are released. Reference CS-4101.'},
+    {id:'CS-4102',kind:'mismatch',subject:'Salesforce shows Pending, FLOW shows Paid',source:'Sync monitor',participant:'Casey Quinn',invoice:'INV-2088',paidClaim:true,lines:['2026-10-20'],ageH:30,priority:null,status:'New',owner:'Unassigned',
+      sf:{status:'Pending',updated:'4 Nov 2026 09:12'},flow:{status:'Paid',updated:'7 Nov 2026 16:40',ref:'PAY-77120'},
+      fields:[{label:'Invoice',value:'INV-2088 · $185.00',src:'FLOW invoice record'},{label:'Payment reference',value:'PAY-77120',src:'FLOW payment record'}],
+      draft:'Update Salesforce case status for INV-2088 from Pending to Paid, citing FLOW payment PAY-77120. Raise a sync defect for the missed update.'},
+    {id:'CS-4103',kind:'timeout',subject:'Case update timed out — outcome unknown',source:'Integration',participant:'Sam Taylor',invoice:'INV-2093',lines:['2026-08-20'],ageH:5,priority:null,status:'New',owner:'Unassigned',opKey:'P-17730:INV-2093:status-note',
+      fields:[{label:'Operation key',value:'P-17730:INV-2093:status-note',src:'Workflow record'}],
+      draft:'Look up the original operation key in Salesforce before any retry.'},
+    {id:'CS-4104',kind:'missing',subject:'INV-2103 missing service date',source:'Invoice intake',participant:'Alex Morgan',invoice:'INV-2103',lines:[null],ageH:20,priority:null,status:'New',owner:'Unassigned',
+      fields:[{label:'Provider',value:'Bright Path Supports',src:'FLOW invoice record'},{label:'Amount',value:'$240.00',src:'FLOW invoice record'},{label:'Service date',value:'Not on invoice',src:'FLOW intake check'}],
+      draft:'Hi Bright Path Supports, INV-2103 ($240) does not show the date of service. Please send a corrected invoice listing each service date, keeping the same invoice number. Reference CS-4104.'},
+    {id:'CS-4105',kind:'review',subject:'Review indicator on provider batch',source:'FLOW finding',participant:'Several',invoice:'Batch B-311',lines:['2026-08-25','2026-08-28','2026-09-30','2026-10-07','2026-10-21','2026-10-30'],ageH:9,priority:null,status:'New',owner:'Unassigned',restricted:true,
+      fields:[{label:'Finding',value:'Review indicator v2 (not a decision)',src:'FLOW finding'},{label:'Invoices in batch',value:'6',src:'FLOW finding'}],
+      draft:'Assign to Compliance for evidence review. No contact with participants or providers. No adverse finding is made.'},
+    {id:'CS-4106',kind:'status',subject:'Nominee asks for plan balance by phone',source:'Phone note',participant:'Riley Chen',invoice:'—',ageH:76,priority:null,status:'New',owner:'Unassigned',
+      fields:[{label:'Caller role',value:'Nominee (verified on file)',src:'Salesforce contact'},{label:'Available this period',value:'$2,940',src:'FLOW budget snapshot'}],
+      draft:'Call back the nominee for Riley Chen with the available amount for this period ($2,940) and offer a walkthrough of the dashboard.'}
+  ];
+}
+
+/* ---------- State ---------- */
+let S;
+function fresh(){
+  return {
+    cases: seedCases().map(c => ({...c, trace:[], outcome:'', confirmed:{}, lookup:null, notes:[], links:[]})), cu:0,
+    sel:'CS-4101', filter:'Open', q:'',
+    triaging:false, gen:0,
+    p:{ messages:[], requests:[], busy:false, queue:[], outage:false, legendOpen:null, easy:false, voice:false, pre:'', asked:new Set(), ai:{calls:0,tin:0,tout:0} },
+    sim:{ lookup:'found' }
+  };
+}
+S = fresh();
+const timers = new Set();
+function later(fn, ms){ const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; }
+function clearTimers(){ timers.forEach(clearTimeout); timers.clear(); }
+
+let toastT;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,4200); }
+function say(msg){ const l=$('#live'); l.textContent=''; setTimeout(()=>l.textContent=msg,30); }
+
+const OPEN = c => !['Resolved','Held'].includes(c.status);
+const caseById = id => S.cases.find(c => c.id === id);
+
+/* ---------- Router ---------- */
+const ROUTES = {exec:viewExec, obs:viewObs, start:viewStart, ops:viewOps, health:viewHealth, participant:viewParticipant, reports:viewReports, access:viewAccess, agents:viewAgents};
+let lastRoute = null;
+function route(){
+  const r = (location.hash || '#start').slice(1);
+  const name = ROUTES[r] ? r : 'start';
+  if (name !== 'participant' && S.p.tour) stopGuide(true);
+  $$('#nav a').forEach(a => a.dataset.r === name ? a.setAttribute('aria-current','page') : a.removeAttribute('aria-current'));
+  ROUTES[name]();
+  $('#nav-open').textContent = S.cases.filter(OPEN).length;
+  if (lastRoute !== name){ lastRoute = name; const h = $('#view h1'); if (h){ h.tabIndex = -1; h.focus({preventScroll:false}); } }
+}
+window.addEventListener('hashchange', route);
+function go(r){ if (location.hash === '#'+r) route(); else location.hash = r; }
+
+/* ---------- Start ---------- */
+function viewStart(){
+  $('#view').innerHTML = `
+  <div class="pagehead"><div><span class="eyebrow">Prepared for Provider Choice · follow-up to our conversation on 10 Nov</span>
+    <h1>One place for the case, the money and the person</h1>
+    <p>I built this after our conversation to test whether I understood the challenges: Salesforce operations work that piles up and drifts out of sync, the 90-day claiming rule from 1 December, participants who can't see what's happening with their money, and the need to show capability with evidence. It's a concept to react to, not a claim about how your platform works today.</p></div></div>
+  <div class="grid3">
+    ${startCard('ops','Case triage','Agents sort the backlog, pull facts from FLOW so nobody re-keys them, and draft the next step. A person approves every action.','Salesforce operations')}
+    ${startCard('participant','Participant view','A budget that adds up, a plain way to ask "was I charged twice?", and requests that reach the Ops queue with context.','Customer experience')}
+    ${startCard('reports','Service report','What leadership and the Ops lead would watch each week, plus an accessibility tracker with real findings from this build.','Reporting')}
+  </div>
+  <section class="panel"><h2>A two-minute path</h2>
+    <ol class="stack" style="padding-left:20px;margin:0">
+      <li>Open <a href="#participant">Participant view</a> and ask "Can I talk to someone about INV-2102?". Confirm the request.</li>
+      <li>Go to <a href="#ops">Case triage</a> and press <strong>Triage backlog</strong>. The participant's request arrives with its context.</li>
+      <li>Open the sync mismatch (CS-4102) and the timeout (CS-4103) to see how out-of-sync records are recovered safely.</li>
+      <li>Approve the participant's case, then return to <a href="#participant">Participant view</a> to see the outcome.</li>
+      <li>Open <a href="#exec">Executive dashboard</a> for cost per case and human escalations, and <a href="#obs">Agent observability</a> for the full trace.</li>
+    </ol>
+  </section>
+  <section class="panel"><h2>What's real and what isn't</h2>
+    <div class="grid2 small">
+      <div class="stack"><h3>Working in this page</h3><p>Navigation, filters, budget arithmetic, case de-duplication, approval gates that require confirmed fields, the reconciliation branches, and the shared state between the participant and Ops views.</p></div>
+      <div class="stack"><h3>Simulated</h3><p>Every AI answer and agent step is scripted. Salesforce and FLOW are mocked; I don't know their real interfaces. People, invoices and figures are invented. Report numbers are illustrative, not Provider Choice data.</p></div>
+    </div>
+  </section>`;
+}
+function startCard(r, t, d, k){ return `<a class="panel" href="#${r}" style="text-decoration:none;color:inherit;display:grid;gap:8px"><span class="eyebrow">${k}</span><h2>${t}</h2><p class="muted">${d}</p><span style="color:var(--accent);font-weight:600">Open ${t.toLowerCase()} →</span></a>`; }
+
+/* ---------- Ops: triage ---------- */
+const STEP_MS = 260;
+function triageScript(c){
+  const routeMap = {status:['Status enquiry','Medium','Answerable from FLOW records; no investigation needed.'],
+    mismatch:['Sync mismatch','High','Two systems disagree on payment status; staff may give a wrong answer until fixed.'],
+    timeout:['Integration recovery','High','A write may or may not have happened; a blind retry could duplicate it.'],
+    missing:['Missing information','Medium','Claim cannot proceed until the provider supplies the service date.'],
+    review:['Compliance review','High','FLOW review indicator; restricted to authorised reviewers.'],
+    duplicate:['Possible duplicate','Medium','Participant raised a concern about similar invoices; needs a person to compare records.'],
+    participant:['Participant question','Medium','Participant asked for a person; context is attached.']};
+  const [rt, pr, why] = routeMap[c.kind] || routeMap.participant;
+  const ownerMap = {status:'Participant Support',mismatch:'Platform Support',timeout:'Platform Support',missing:'Invoicing Team',review:'Compliance',duplicate:'Invoicing Team',participant:'Participant Support'};
+  const w = claimWindow(c);
+  const clockUrgent = w && (w.state==='near' || w.state==='past' || w.state==='unknown');
+  const ageBump = (clockUrgent || (c.ageH > 48 && pr === 'Medium')) ? 'High' : pr;
+  const clockWhy = !w ? '' : w.state==='unknown' ? ' The 90-day clock cannot be checked until the service date is known.' : w.state==='paid' ? '' : ` Oldest service line has ${w.left} day${w.left===1?'':'s'} left before the 90-day mark.`;
+  const steps = [
+    ['code','Coordinator',`Opened workflow WF-${c.id.slice(3)}; checked the reviewer may access ${esc(c.participant)}.`,{ms:40}],
+    ['code','Claim clock', !w ? 'No claim attached; 90-day check not needed.' : w.state==='paid' ? 'Claim already paid; no deadline.' : w.state==='unknown' ? 'Service date missing, so the 90-day clock is unknown. Flagged as urgent.' : `Checked ${w.rows.length} service line${w.rows.length>1?'s':''} against the 90-day mark: oldest has ${w.left} days left${w.near?`, ${w.near} within 14 days`:''}.`,{ms:10}],
+    ['model','Triage agent',`Suggested route: ${rt}. Priority ${ageBump}${ageBump!==pr?(clockUrgent?' (raised: claim deadline close or unknown)':' (raised: waiting over 48 hours)'):''}. Reason: ${why}${clockWhy}`,{ms:900,tin:1100+c.subject.length*6,tout:140}],
+    ['tool','Evidence agent',`Read ${c.fields.length} field${c.fields.length>1?'s':''} from FLOW and Salesforce (mock) so nobody re-keys them.`,{ms:350,calls:c.fields.length}]
+  ];
+  if (c.restricted) steps.push(['code','Rules',`Restricted case: evidence limited to Compliance. No external draft allowed.`,{ms:15}]);
+  steps.push(['model','Drafting agent', c.restricted ? 'Prepared an internal referral note only.' : 'Drafted the next action for a person to review.',{ms:1700,tin:2300,tout:c.restricted?120:280}]);
+  steps.push(['code','Coordinator',`Paused for human approval. Owner: ${ownerMap[c.kind]||'Participant Support'}.`,{ms:20}]);
+  return {rt, pr:ageBump, why: why + clockWhy, owner:ownerMap[c.kind]||'Participant Support', steps};
+}
+function runTriage(){
+  if (S.triaging) return;
+  const todo = S.cases.filter(c => c.status === 'New');
+  if (!todo.length){ toast('Nothing new to triage.'); return; }
+  S.triaging = true; const gen = ++S.gen; route();
+  let i = 0;
+  const nextCase = () => {
+    if (gen !== S.gen) return;
+    if (i >= todo.length){ S.triaging=false; route(); toast(`Triaged ${todo.length} case${todo.length>1?'s':''}. Each now waits for a person.`); say(`Triage complete for ${todo.length} cases.`); return; }
+    const c = todo[i++]; const t = triageScript(c); let k = 0;
+    c.status = 'Triaging';
+    const nextStep = () => {
+      if (gen !== S.gen) return;
+      if (k < t.steps.length){ c.trace.push(t.steps[k++]); if (location.hash==='#ops' && S.sel===c.id) renderDetail(); later(nextStep, STEP_MS); return; }
+      c.route=t.rt; c.priority=t.pr; c.why=t.why; c.owner=t.owner; c.status='Awaiting approval';
+      if (location.hash==='#ops'){ renderQueue(); renderKpis(); if (S.sel===c.id) renderDetail(); }
+      renderRequests();
+      later(nextCase, STEP_MS);
+    };
+    if (location.hash==='#ops'){ S.sel = S.sel || c.id; renderQueue(); }
+    nextStep();
+  };
+  nextCase();
+}
+
+function viewOps(){
+  $('#view').innerHTML = `
+  <div class="pagehead"><div><span class="eyebrow">Operations · Salesforce cases</span><h1>Case triage</h1>
+    <p>The backlog sorted by urgency, with facts pulled from FLOW instead of typed in, and a drafted next step. Nothing moves until a person approves it.</p></div>
+    <div class="row"><button class="btn primary" id="triage" ${S.triaging?'disabled':''}>${S.triaging?'Triaging…':'Triage backlog'}</button></div></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="split">
+    <section class="panel queue" aria-labelledby="qh">
+      <div class="qtools"><div class="between"><h2 id="qh">Queue</h2><span class="small muted" id="qcount"></span></div>
+        <label class="sr" for="qsearch">Search cases</label><input type="search" id="qsearch" placeholder="Search case, invoice or participant" value="${esc(S.q)}">
+        <div class="seg" role="group" aria-label="Filter by status">${['Open','Awaiting approval','Resolved','All'].map(f=>`<button data-f="${f}" aria-pressed="${S.filter===f}">${f}</button>`).join('')}</div></div>
+      <ul class="qlist" id="qlist"></ul>
+    </section>
+    <section class="panel" id="detail" aria-live="off"></section>
+  </div>`;
+  $('#triage').onclick = runTriage;
+  $('#qsearch').oninput = e => { S.q = e.target.value; renderQueue(); };
+  $$('[data-f]').forEach(b => b.onclick = () => { S.filter = b.dataset.f; $$('[data-f]').forEach(x => x.setAttribute('aria-pressed', x===b)); renderQueue(); });
+  renderKpis(); renderQueue(); renderDetail();
+}
+function renderKpis(){
+  const k = $('#kpis'); if (!k) return;
+  const open = S.cases.filter(OPEN);
+  k.innerHTML = [
+    ['Open cases', open.length, 'In this demo queue'],
+    ['Near the 90-day mark', open.filter(c=>{const w=claimWindow(c);return w && (w.state==='near'||w.state==='past'||w.state==='unknown');}).length, '14 days or less, or date missing'],
+    ['Systems out of sync', open.filter(c=>c.kind==='mismatch'||c.kind==='timeout').length, 'Salesforce vs FLOW'],
+    ['Fields not re-keyed', S.cases.reduce((n,c)=>n+c.fields.length,0), 'Pulled from source, then confirmed']
+  ].map(([a,b,c])=>`<div class="kpi"><span>${a}</span><strong>${b}</strong><span class="small">${c}</span></div>`).join('');
+}
+const DEMO_TODAY = Date.UTC(2026, 10, 12);
+const fmtDate = iso => { const [y,m,d] = iso.split('-').map(Number); return `${d} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].at(m-1)} ${y}`; };
+const daysSince = iso => Math.floor((DEMO_TODAY - Date.parse(iso)) / 864e5);
+function claimWindow(c){
+  if (!c.lines || !c.lines.length) return null;
+  if (c.paidClaim) return {state:'paid'};
+  if (c.lines.some(l => !l)) return {state:'unknown', n:c.lines.length};
+  const rows = c.lines.map(d => ({d, since:daysSince(d), left:90 - daysSince(d)})).sort((a,b) => a.left - b.left);
+  const left = rows[0].left;
+  return {state: left <= 0 ? 'past' : left <= 14 ? 'near' : 'ok', left, rows, near: rows.filter(r => r.left <= 14).length};
+}
+function clockPill(c){
+  const w = claimWindow(c); if (!w) return '';
+  if (w.state === 'paid') return '<span class="pill p-neutral">Claimed and paid</span>';
+  if (w.state === 'unknown') return '<span class="pill p-bad">Service date missing</span>';
+  if (w.state === 'past') return `<span class="pill p-bad">${-w.left} days past 90</span>`;
+  return `<span class="pill ${w.state==='near'?'p-warn':'p-good'}">${w.left} days left to claim</span>`;
+}
+const clockRank = c => { const w = claimWindow(c); if (!w || w.state==='paid') return 999; if (w.state==='unknown') return -1; return w.left; };
+const prioRank = {High:0, Medium:1, Low:2};
+function renderQueue(){
+  const ul = $('#qlist'); if (!ul) return;
+  const q = S.q.toLowerCase();
+  const list = S.cases.filter(c => (S.filter==='All' || (S.filter==='Open' ? OPEN(c) : c.status===S.filter)) && `${c.id} ${c.subject} ${c.participant} ${c.invoice}`.toLowerCase().includes(q))
+    .sort((a,b) => (prioRank[a.priority]??3) - (prioRank[b.priority]??3) || clockRank(a) - clockRank(b) || b.ageH - a.ageH);
+  $('#qcount').textContent = `${list.length} shown`;
+  ul.innerHTML = list.length ? list.map(c => `<li class="qitem"><button data-c="${c.id}" aria-current="${S.sel===c.id}">
+      ${c.priority?`<span class="prio prio-${c.priority}" aria-hidden="true"></span>`:''}
+      <span class="between"><span class="t">${esc(c.subject)}</span>${statusPill(c)}</span>
+      <span class="m"><span class="mono">${c.id}</span> · ${esc(c.source)} · ${esc(c.participant)} · ${ageText(c.ageH)}</span>
+      ${clockPill(c) ? `<span>${clockPill(c)}</span>` : ''}
+      <span class="m">${c.priority?`Priority <strong>${c.priority}</strong> · ${esc(c.route)}`:'Not yet triaged'}${c.restricted?' · Restricted':''}</span></button></li>`).join('')
+    : '<li class="empty">No cases match. Clear the search or choose another filter.</li>';
+  $$('[data-c]', ul).forEach(b => b.onclick = () => { S.sel = b.dataset.c; renderQueue(); renderDetail(); const h=$('#detail h2'); if(h){h.tabIndex=-1;h.focus();} });
+  $('#nav-open').textContent = S.cases.filter(OPEN).length;
+}
+function ageText(h){ return h < 24 ? `${h}h old` : `${Math.floor(h/24)}d ${h%24}h old`; }
+function statusPill(c){
+  const m = {'New':'p-neutral','Triaging':'p-info','Awaiting approval':'p-warn','Resolved':'p-good','Held':'p-bad'};
+  return `<span class="pill ${m[c.status]||'p-neutral'}">${c.status}</span>`;
+}
+
+function renderDetail(){
+  const d = $('#detail'); if (!d) return;
+  const c = caseById(S.sel);
+  if (!c){ d.innerHTML = '<p class="empty">Choose a case from the queue.</p>'; return; }
+  const ready = c.status === 'Awaiting approval';
+  const done = c.status === 'Resolved' || c.status === 'Held';
+  const allConfirmed = c.fields.every((f,i) => c.confirmed[i]);
+  const keepDraft = $('#draft') && $('#draft').dataset.case === c.id ? $('#draft').value : null;
+  const keepPmsg = $('#pmsg') && $('#pmsg').dataset.case === c.id ? $('#pmsg').value : null;
+  d.innerHTML = `
+    <div class="between"><div><span class="eyebrow mono">${c.id} · ${esc(c.source)}</span><h2 style="margin-top:4px">${esc(c.subject)}</h2></div>${statusPill(c)}</div>
+    <dl class="facts" style="margin-top:14px">
+      <div><dt>Participant</dt><dd>${esc(c.participant)}</dd></div>
+      <div><dt>Invoice</dt><dd class="mono">${esc(c.invoice)}</dd></div>
+      <div><dt>Priority</dt><dd>${c.priority ? `<label class="sr" for="prio">Priority</label><select id="prio" class="sel" ${done?'disabled':''}>${['High','Medium','Low'].map(p=>`<option ${p===c.priority?'selected':''}>${p}</option>`).join('')}</select>` : 'Not triaged'}</dd></div>
+      <div><dt>Owner</dt><dd>${esc(c.owner)}</dd></div>
+      <div><dt>Waiting</dt><dd>${ageText(c.ageH)}</dd></div>
+    </dl>
+    ${c.why?`<p class="callout info small" style="margin-top:14px"><strong>Why this priority:</strong> ${esc(c.why)} <span class="muted">Suggested by the triage agent; staff can change it.</span></p>`:''}
+    ${c.restricted?`<p class="callout bad small" style="margin-top:12px"><strong>Restricted.</strong> Visible to authorised Compliance staff only. An indicator is not a finding; nobody outside Compliance is contacted.</p>`:''}
+    ${c.notes.length?`<section style="margin-top:16px"><h3>From the participant</h3><ul class="small" style="margin:6px 0 0;padding-left:18px">${c.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></section>`:''}
+    <section style="margin-top:18px"><div class="between"><h3>Facts pulled from source</h3><span class="small muted">Confirm each instead of re-typing it</span></div>
+      <div class="tablewrap"><table style="margin-top:8px"><thead><tr><th scope="col">Confirm</th><th scope="col">Field</th><th scope="col">Value</th><th scope="col">Source</th></tr></thead><tbody>
+      ${c.fields.map((f,i)=>`<tr><td><input type="checkbox" id="cf-${i}" ${c.confirmed[i]?'checked':''} ${!ready?'disabled':''} aria-label="Confirm ${esc(f.label)}"></td><td>${esc(f.label)}</td><td class="mono">${esc(f.value)}</td><td><span class="tag">${esc(f.src)}</span></td></tr>`).join('')}
+      </tbody></table></div></section>
+    ${clockPanel(c)}
+    ${kindPanel(c, ready, done)}
+    ${c.restricted || c.kind==='timeout' ? '' : `<section style="margin-top:18px" class="field"><label for="draft">Proposed action ${done?'(approved)':'· edit before approving'}</label>
+      <textarea id="draft" data-case="${c.id}" ${!ready?'readonly':''}>${esc(keepDraft ?? c.draft)}</textarea></section>`}
+    ${c.restricted ? `<section style="margin-top:18px" class="field"><label for="draft">Internal referral note</label><textarea id="draft" data-case="${c.id}" ${!ready?'readonly':''}>${esc(keepDraft ?? c.draft)}</textarea></section>`:''}
+    ${c.fromPortal ? `<section style="margin-top:14px" class="field"><label for="pmsg">Message the participant will see</label><textarea id="pmsg" data-case="${c.id}" ${!ready?'readonly':''}>${esc(keepPmsg ?? c.pmsg)}</textarea></section>`:''}
+    ${actionBar(c, ready, done, allConfirmed)}
+    ${c.outcome?`<p class="callout good" style="margin-top:14px"><strong>Recorded:</strong> ${esc(c.outcome)}</p>`:''}
+    ${c.trace.length?`<section style="margin-top:16px"><h3>Traceability</h3><div class="row" style="margin-top:6px">${linkChips(c)}</div><p class="small muted" style="margin-top:6px">${costLine(c)} · <a href="#obs" data-obs="${c.id}">Open trace</a></p></section>`:''}
+    <section style="margin-top:20px"><h3>Who did what</h3>
+      ${c.trace.length?`<ol class="trace" style="margin-top:6px">${c.trace.map(([k,a,t])=>`<li><span class="tag ${k}">${a}</span><span>${t}</span></li>`).join('')}</ol>`:`<p class="muted small" style="margin-top:6px">Not triaged yet. Press <strong>Triage backlog</strong> to run the agents.</p>`}
+      <p class="small muted" style="margin-top:8px"><span class="tag model">model</span> scripted AI step · <span class="tag tool">tool</span> read-only lookup · <span class="tag code">code</span> deterministic rule · <span class="tag human">person</span> human decision</p>
+    </section>`;
+  c.fields.forEach((f,i) => { const cb = $('#cf-'+i); if (cb) cb.onchange = () => { c.confirmed[i] = cb.checked; renderDetail(); const n = $('#cf-'+i); if (n) n.focus(); }; });
+  const pr = $('#prio'); if (pr) pr.onchange = () => { const old=c.priority; c.priority = pr.value; c.trace.push(['human','Staff',`Changed priority from ${old} to ${pr.value}.`,{mins:0.5}]); renderQueue(); renderDetail(); const n=$('#prio'); if (n) n.focus(); };
+  bindKind(c);
+  $$('[data-obs]').forEach(a => a.onclick = () => { S.obsSel = a.dataset.obs; });
+  const ap = $('#approve'); if (ap) ap.onclick = () => approve(c);
+  const hd = $('#hold'); if (hd) hd.onclick = () => hold(c);
+}
+function clockPanel(c){
+  const w = claimWindow(c); if (!w) return '';
+  const rule = `<p class="small muted" style="margin-top:8px">From 1 Dec 2026, a claim must reach the NDIA within 90 days of each service date, or it isn't paid unless exceptional circumstances apply. Since 15 Oct 2026, claims over 90 days may be held up to 28 days for extra checks. Our processing time counts. Demo date: 12 Nov 2026. <a href="https://providerchoice.com.au/blog/ndis-90-day-claiming-rule" target="_blank" rel="noopener">Provider Choice guide</a></p>`;
+  if (w.state === 'paid') return `<section style="margin-top:18px"><h3>90-day claim window</h3><p class="small" style="margin-top:4px">Claimed and paid. No deadline applies.</p></section>`;
+  if (w.state === 'unknown') return `<section style="margin-top:18px"><h3>90-day claim window</h3><div class="callout bad small" style="margin-top:6px"><strong>Clock unknown.</strong> Without a service date we can't tell how many days are left, so this is treated as urgent until the provider confirms it.</div>${rule}</section>`;
+  return `<section style="margin-top:18px"><div class="between"><h3>90-day claim window</h3>${clockPill(c)}</div>
+    <p class="small" style="margin-top:4px">Each service date has its own clock. The oldest line sets the urgency.</p>
+    <div class="tablewrap"><table style="margin-top:8px"><thead><tr><th scope="col">Service date</th><th scope="col" class="num">Days since service</th><th scope="col" class="num">Days left</th><th scope="col">Status</th></tr></thead><tbody>
+    ${w.rows.map(r => `<tr><td>${fmtDate(r.d)}</td><td class="num">${r.since}</td><td class="num">${r.left}</td><td><span class="pill ${r.left<=0?'p-bad':r.left<=14?'p-warn':'p-good'}">${r.left<=0?'Past 90 days':r.left<=14?'Act now':'Inside window'}</span></td></tr>`).join('')}
+    </tbody></table></div>${rule}</section>`;
+}
+function kindPanel(c, ready, done){
+  if (c.kind === 'mismatch') return `<section style="margin-top:18px"><h3>Systems disagree</h3>
+    <div class="diff" style="margin-top:8px"><div><span class="src">Salesforce case</span><p style="font-size:1.2rem;font-weight:600">${c.sf.status}</p><p class="small muted">Last updated ${c.sf.updated}</p></div>
+    <div><span class="src">FLOW payment record</span><p style="font-size:1.2rem;font-weight:600">${c.flow.status}</p><p class="small muted">Last updated ${c.flow.updated} · <span class="mono">${c.flow.ref}</span></p></div></div>
+    <p class="small muted" style="margin-top:8px">Assumption to validate: FLOW is the source of truth for payment status, so Salesforce is corrected to match it, never the other way round.</p></section>`;
+  if (c.kind === 'timeout'){
+    const L = c.lookup;
+    return `<section style="margin-top:18px"><h3>Recover safely: look up before retrying</h3>
+      <p class="small" style="margin-top:4px">A timeout means <strong>unknown</strong>, not failed. The workflow kept the operation key <span class="mono">${esc(c.opKey)}</span> so it can ask Salesforce what actually happened.</p>
+      <div class="row" style="margin-top:10px"><label class="lbl" for="simlk">Demo: what Salesforce will say</label>
+        <select id="simlk" class="sel" style="width:auto" ${!ready||L?'disabled':''}><option value="found" ${S.sim.lookup==='found'?'selected':''}>Update exists</option><option value="missing" ${S.sim.lookup==='missing'?'selected':''}>No record of update</option><option value="unknown" ${S.sim.lookup==='unknown'?'selected':''}>Salesforce unavailable</option></select>
+        <button class="btn" id="lookup" ${!ready||L?'disabled':''}>Look up by operation key</button></div>
+      ${L?`<div class="callout ${L==='found'?'good':L==='missing'?'warn':'bad'}" style="margin-top:10px">${
+        L==='found'?'<strong>Found.</strong> The update reached Salesforce. Approving records this, with no second write.':
+        L==='missing'?'<strong>Not found.</strong> The update never arrived. Approving retries once with the same operation key, so a late duplicate is ignored.':
+        '<strong>Still unknown.</strong> Salesforce did not answer. The case is held and Platform Support is alerted. Nothing is retried blindly.'}</div>`:''}
+    </section>`;
+  }
+  if (c.kind === 'duplicate') return `<section style="margin-top:18px"><h3>Records to compare</h3><div class="diff" style="margin-top:8px">${INVOICES.slice(0,2).map(i=>`<div><span class="src mono">${i.id}</span><p><strong>${aud(i.amount)}</strong> · ${esc(i.provider)}</p><p class="small muted">${esc(i.service)} · ${i.date} · ${i.status}</p></div>`).join('')}</div>
+    <p class="small muted" style="margin-top:8px">Matching date and amount are a reason to check, not proof. Ask the provider for session times before deciding.</p></section>`;
+  return '';
+}
+function bindKind(c){
+  const lk = $('#lookup'); if (!lk) return;
+  $('#simlk').onchange = e => S.sim.lookup = e.target.value;
+  lk.onclick = () => {
+    lk.disabled = true; lk.textContent = 'Looking up…';
+    later(() => {
+      c.lookup = S.sim.lookup;
+      c.trace.push(['tool','Salesforce lookup',`Read by operation key ${esc(c.opKey)}: ${c.lookup==='found'?'update exists':c.lookup==='missing'?'no record':'no response'}.`,{ms:600,calls:1}]);
+      if (location.hash==='#ops' && S.sel===c.id) renderDetail();
+      say('Lookup finished.');
+    }, 500);
+  };
+}
+function actionBar(c, ready, done, allConfirmed){
+  if (done || !ready) return '';
+  let disabled = !allConfirmed, hint = allConfirmed ? '' : `Confirm all ${c.fields.length} facts to enable approval.`;
+  let label = c.restricted ? 'Approve referral to Compliance' : 'Approve and record';
+  if (c.kind === 'timeout'){
+    if (!c.lookup){ disabled = true; hint = 'Look up the operation key first.'; }
+    label = c.lookup==='found' ? 'Record existing update' : c.lookup==='missing' ? 'Retry once with same key' : c.lookup==='unknown' ? 'Hold and alert Platform Support' : 'Approve';
+  }
+  if (c.kind === 'mismatch') label = 'Approve Salesforce correction';
+  return `<div class="row" style="margin-top:16px"><button class="btn primary" id="approve" ${disabled?'disabled':''} aria-describedby="ahint">${label}</button>
+    ${c.kind!=='timeout'?'<button class="btn" id="hold">Hold for more information</button>':''}<span id="ahint" class="small muted">${hint}</span></div>`;
+}
+function approve(c){
+  if (c.status !== 'Awaiting approval') return;
+  const draft = $('#draft') ? $('#draft').value.trim() : '';
+  const pm = $('#pmsg') ? $('#pmsg').value.trim() : '';
+  if ($('#draft') && !draft){ toast('The proposed action is empty. Add the action before approving.'); $('#draft').focus(); return; }
+  if (c.fromPortal && !pm){ toast('Add the message the participant will see.'); $('#pmsg').focus(); return; }
+  if (c.kind === 'timeout' && c.lookup === 'unknown'){ hold(c, 'Held: Salesforce unavailable. Platform Support alerted; no retry until the state is known.'); return; }
+  c.draft = draft || c.draft; if (c.fromPortal) c.pmsg = pm;
+  const edited = draft && draft !== seedText(c);
+  c.trace.push(['human','Staff',`Approved${edited?' an edited':' the'} action${c.kind==='timeout'?'':': “'+esc(draft.slice(0,90))+(draft.length>90?'…':'')+'”'}`,{mins:(HUMAN_MIN[c.kind]||5)+(edited?2:0)}]);
+  if (c.kind==='mismatch') linkWork(c,'ClickUp','Platform › Sync defects','Salesforce missed a FLOW payment update');
+  if (c.kind==='review') linkWork(c,'ClickUp','Compliance › Reviews','Evidence review for batch B-311');
+  const outcomes = {
+    status:'Reply recorded on the Salesforce case (simulated). Nothing was sent.',
+    mismatch:'Salesforce status corrected to Paid from FLOW record PAY-77120 (simulated). Sync defect logged.',
+    timeout: c.lookup==='found' ? 'Existing Salesforce update confirmed. No second write.' : 'Retried once with the same operation key; read-back confirmed (simulated).',
+    missing:'Corrected-invoice request recorded for the provider (simulated). Claim stays on hold.',
+    review:'Referral assigned to Compliance (simulated). No adverse finding.',
+    duplicate:'Check completed and outcome recorded (simulated).',
+    participant:'Reply recorded and shown to the participant (simulated).'
+  };
+  c.outcome = outcomes[c.kind] || outcomes.participant;
+  c.trace.push(['code','Coordinator',`Write with key ${c.id}:resolve, read back, audit entry recorded (simulated).`,{ms:140,calls:2}]);
+  c.status = 'Resolved';
+  if (c.fromPortal){ S.p.messages.push({role:'staff', name:'Priya (fictional)', text:`Hi ${PARTICIPANT.first}, it's Priya from Participant Support. ${c.pmsg}`}); syncRequest(c); }
+  renderQueue(); renderKpis(); renderDetail(); toast('Recorded. Nothing left this page.'); say(`${c.id} resolved.`);
+}
+function hold(c, reason){
+  if (c.status !== 'Awaiting approval') return;
+  c.status = 'Held'; c.outcome = reason || 'Held for more information by staff.';
+  c.trace.push(['human','Staff', esc(c.outcome),{mins:(HUMAN_MIN[c.kind]||5)+5}]);
+  c.heldReason = reason ? 'platform' : 'followup';
+  linkWork(c,'ClickUp', reason ? 'Platform › Incidents' : 'Operations › Follow-ups', `Follow up ${c.id}: ${c.subject}`);
+  if (reason) linkWork(c,'Slack','#platform-alerts',`Salesforce unavailable while reconciling ${c.id}`);
+  if (c.fromPortal) syncRequest(c);
+  renderQueue(); renderKpis(); renderDetail(); say(`${c.id} held.`);
+}
+const SEED_DRAFTS = Object.fromEntries(seedCases().map(c => [c.id, c.draft]));
+function seedText(c){ return SEED_DRAFTS[c.id] ?? c.seedDraft; }
+
+/* ---------- Salesforce health ---------- */
+function viewHealth(){
+  const mism = S.cases.filter(c => (c.kind==='mismatch'||c.kind==='timeout'));
+  const autos = [
+    ['Case auto-assignment','Flow',1,'Yes','Yes','14 Oct 2026','Low'],
+    ['Invoice status sync to case','Apex trigger',1,'Partial','No','2 Sep 2026','High'],
+    ['Provider onboarding checklist','Flow',2,'Yes','Yes','20 Aug 2026','Low'],
+    ['Nominee access update','Process Builder (legacy)',1,'No','No','11 Mar 2024','High'],
+    ['Escalation email to team lead','Workflow rule (legacy)',1,'No','No','5 Feb 2023','Medium'],
+    ['Plan period roll-over','Scheduled Flow',1,'Partial','No','30 Jun 2026','High'],
+    ['Duplicate contact check','Duplicate rule',2,'Yes','n/a','8 Jan 2026','Low']
+  ];
+  const riskPill = r => `<span class="pill ${r==='High'?'p-bad':r==='Medium'?'p-warn':'p-good'}">${r}</span>`;
+  $('#view').innerHTML = `
+  <div class="pagehead"><div><span class="eyebrow">Operations · platform</span><h1>Salesforce health</h1>
+    <p>Where Salesforce and FLOW drift apart, and which automations are slow or risky to change. This is what I'd want to see in my first month, built from discovery with your Salesforce lead. Every row here is an invented example.</p></div></div>
+  <div class="kpis">
+    <div class="kpi"><span>Sync events, last 24h</span><strong>1,240</strong><span class="small">Example volume</span></div>
+    <div class="kpi"><span>Mismatches found</span><strong>3</strong><span class="small">Status differs between systems</span></div>
+    <div class="kpi"><span>Uncertain writes</span><strong>1</strong><span class="small">Timed out; reconciled by key</span></div>
+    <div class="kpi"><span>Automations with one owner</span><strong>5 of 7</strong><span class="small">Knowledge risk</span></div>
+  </div>
+  <section class="panel"><header><h2>Sync issues in the queue</h2><a href="#ops">Open triage →</a></header>
+    <div class="tablewrap"><table><thead><tr><th scope="col">Case</th><th scope="col">What happened</th><th scope="col">Safe recovery</th><th scope="col">Status</th></tr></thead><tbody>
+    ${mism.map(c=>`<tr><td class="mono"><a href="#ops" data-open="${c.id}">${c.id}</a></td><td>${esc(c.subject)}</td><td>${c.kind==='mismatch'?'Correct Salesforce from FLOW, the system of record for money (assumed)':'Look up by operation key; never retry blindly'}</td><td>${statusPill(c)}</td></tr>`).join('')}
+    </tbody></table></div></section>
+  <section class="panel"><header><h2>Automation inventory: what makes change slow</h2><span class="small muted">Example rows · real inventory comes from discovery</span></header>
+    <div class="tablewrap"><table><thead><tr><th scope="col">Automation</th><th scope="col">Type</th><th scope="col" class="num">People who understand it</th><th scope="col">Documented</th><th scope="col">Tests</th><th scope="col">Last changed</th><th scope="col">Change risk</th></tr></thead><tbody>
+    ${autos.map(a=>`<tr><td>${a[0]}</td><td>${a[1]}</td><td class="num">${a[2]}</td><td>${a[3]}</td><td>${a[4]}</td><td>${a[5]}</td><td>${riskPill(a[6])}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="grid2" style="margin-top:16px">
+      <div class="callout"><h3>Why this matters</h3><p class="small" style="margin-top:4px">Salesforce has stopped developing Process Builder and Workflow Rules in favour of Flow. Legacy automations that only one person understands, with no tests, are where changes get slow, costly and risky.</p></div>
+      <div class="callout"><h3>What I'd do first, with the Salesforce lead</h3><ul class="small" style="margin:4px 0 0;padding-left:18px"><li>Agree the inventory and the riskiest three together</li><li>Document and pair on each, so two people understand it</li><li>Put Salesforce changes through the same review, test and release process as FLOW</li><li>Retire legacy automations one at a time, behind tests</li></ul></div>
+    </div></section>
+  <section class="panel"><header><h2>Salesforce cost: questions for month one</h2><span class="small muted">No figures until we have the contract</span></header>
+    <div class="tablewrap"><table><thead><tr><th scope="col">Question</th><th scope="col">Why it matters</th><th scope="col">Where the answer is</th></tr></thead><tbody>
+      <tr><td>Which licence types do we pay for, and how many are active each week?</td><td>Unused seats are the quickest saving</td><td>Salesforce login history, contract</td></tr>
+      <tr><td>How close are we to API and storage limits?</td><td>Integrations and agents add API calls</td><td>Salesforce system overview</td></tr>
+      <tr><td>Which work could live in FLOW instead, and what would it cost to move?</td><td>Moving only makes sense if total cost and risk drop</td><td>Automation inventory, with the Salesforce lead</td></tr>
+      <tr><td>When is the renewal, and what can change before it?</td><td>Sets the timeline for any decision</td><td>Contract</td></tr>
+    </tbody></table></div>
+    <p class="small muted" style="margin-top:8px">Agents don't reduce licence cost on their own. The aim is to keep Salesforce where it fits and be deliberate about the rest.</p></section>`;
+  $$('[data-open]').forEach(a => a.onclick = () => { S.sel = a.dataset.open; S.filter='All'; });
+}
+
+/* ---------- Participant ---------- */
+const BUCKETS = [
+  {k:'paid',label:'Paid',sw:'seg-paid',amt:BUDGET.paid,help:'Already paid to providers this period. The list below shows recent invoices only.'},
+  {k:'reserved',label:'Reserved',sw:'seg-res',amt:BUDGET.reserved,help:'Kept aside for supports you have agreed with providers but not used yet.'},
+  {k:'checking',label:'Being checked',sw:'seg-chk',amt:BUDGET.checking,help:'Invoices we have received and are checking before payment: INV-2102 ($150) and INV-2103 ($240).'},
+  {k:'available',label:'Available',sw:'seg-avl',amt:BUDGET.available,help:'What is left to spend this period after the other three.'}
+];
+function viewParticipant(){
+  const P = S.p;
+  $('#view').innerHTML = `
+  <div class="pagehead"><div><span class="eyebrow">Participant view · ${esc(PARTICIPANT.name)} (fictional)</span><h1>Hi ${PARTICIPANT.first}, here's where your plan stands</h1>
+    <p>Everything here works without the chat. You can ask a person at any time.</p></div>
+    <div class="row"><button class="btn" id="easy" aria-pressed="${P.easy}">Easy Read</button><button class="btn" id="read">Read summary aloud</button></div></div>
+  <div class="pgrid">
+    <div class="stack">
+      <section class="panel budget" aria-labelledby="bh" id="budget"></section>
+      <section class="panel" aria-labelledby="ih"><header><h2 id="ih">Recent invoices</h2><span class="small muted">4 of this period's invoices</span></header><ul class="inv" id="inv"></ul></section>
+      <section class="panel" aria-labelledby="rh"><header><h2 id="rh">Your requests</h2><button class="btn sm" data-ask="I want to talk to a person">Ask a person</button></header><div id="reqs"></div></section>
+    </div>
+    <aside class="panel chat" aria-labelledby="ch">
+      <div class="agent-head"><span class="avwrap">${avatar(64,'av-main')}<span class="aibadge">AI</span></span><div><h2 id="ch">Kiri <span class="tag model">AI guide</span></h2><p class="small muted" id="av-status">Your AI guide. Not a person, but can bring one in.</p></div>
+        <div class="row"><button class="btn sm" id="voice" aria-pressed="${P.voice}">Voice replies ${P.voice?'on':'off'}</button><button class="btn sm" id="talkp" data-ask="I want to talk to a real person">Talk to a real person</button></div></div>
+      <div class="log" id="log" role="log" aria-label="Conversation"></div>
+      <div class="choices" role="group" aria-label="Things I can help with">${[['Show me around the page','Show me around'],['How much money can I still use?','How much is left?'],['Something on a bill looks wrong','Was I charged twice?'],['Why is a payment late?','Why is a payment delayed?'],['I want to talk to a real person','I want to talk to a real person']].map(([l,q])=>`<button data-ask="${q}">${l}</button>`).join('')}</div>
+      <form class="chatform" id="cf"><label class="sr" for="cq">Your question</label><input id="cq" maxlength="400" autocomplete="off" placeholder="Or type in your own words"><button class="btn primary" type="submit">Send</button></form>
+      <p class="small muted">Please don't type personal details. Messages stay in this page.</p>
+      <details><summary class="small">Demo controls</summary><label class="check small" style="margin-top:8px"><input type="checkbox" id="outage" ${P.outage?'checked':''}> Simulate: budget data can't be loaded</label></details>
+    </aside>
+  </div>`;
+  renderBudget(); renderInvoices(); renderRequests(); renderLog();
+  if (!P.messages.length) bot(`Hi ${PARTICIPANT.first}, I'm Kiri, your AI guide. I'm not a person, but I can bring someone from our team in whenever you like. Would you like me to show you around the page? It takes about a minute.`, [{label:'Yes, show me around',primary:true,act:'tour',args:['portal']},{label:'No thanks',act:'keep'}]);
+  $('#voice').onclick = () => { P.voice = !P.voice; const b=$('#voice'); b.setAttribute('aria-pressed', P.voice); b.textContent = `Voice replies ${P.voice?'on':'off'}`; if (!P.voice && 'speechSynthesis' in window) speechSynthesis.cancel(); if (P.voice && !('speechSynthesis' in window)) toast('Voice is not available in this browser. Replies stay on screen.'); };
+  $('#easy').onclick = () => { P.easy = !P.easy; $('#easy').setAttribute('aria-pressed', P.easy); renderBudget(); };
+  $('#read').onclick = readAloud;
+  $('#outage').onchange = e => { P.outage = e.target.checked; renderBudget(); };
+  $('#cq').onfocus = () => { if (!S.p.busy) setAgent('listening', 'Listening…'); };
+  $('#cq').onblur = () => { if (!S.p.busy) setAgent('idle', 'Your AI guide. Not a person, but can bring one in.'); };
+  $('#cf').onsubmit = e => { e.preventDefault(); const v = $('#cq').value.trim(); if (!v) return; $('#cq').value=''; ask(v); };
+  $$('[data-ask]').forEach(b => b.onclick = () => ask(b.dataset.ask));
+}
+function renderBudget(){
+  const b = $('#budget'); if (!b) return; const P = S.p;
+  if (P.outage){ b.innerHTML = `<h2 id="bh">Your budget</h2><div class="callout warn"><strong>We can't load your budget right now.</strong> This is our problem, not yours. Your money is safe and nothing has changed. Try again later, or ask a person and we'll tell you the figures.</div><div class="row"><button class="btn" data-ask="I want to talk to a person about my budget">Ask a person</button></div>`; $$('[data-ask]',b).forEach(x=>x.onclick=()=>ask(x.dataset.ask)); return; }
+  const pct = v => (v / BUDGET.allocated * 100);
+  if (P.easy){
+    b.innerHTML = `<h2 id="bh">Your money · Easy Read</h2><div class="easy stack">
+      <p>You have <strong>${aud(BUDGET.allocated)}</strong> for October, November and December.</p>
+      <p>We have <strong>paid ${aud(BUDGET.paid)}</strong>.</p>
+      <p><strong>${aud(BUDGET.reserved)}</strong> is kept for supports you have already agreed.</p>
+      <p>We are <strong>checking ${aud(BUDGET.checking)}</strong> of invoices before we pay.</p>
+      <p>You can still use <strong>${aud(BUDGET.available)}</strong>.</p></div>`;
+    return;
+  }
+  b.innerHTML = `<div class="between"><div><h2 id="bh">Your budget this period</h2><p class="small muted">${BUDGET.period} · total ${aud(BUDGET.allocated)} · updated 12 Nov 2026, 9:00 am</p></div></div>
+    <div><span class="small muted">Available to use</span><div class="bignum">${aud(BUDGET.available)}</div></div>
+    <div class="bar" role="img" aria-label="Of ${aud(BUDGET.allocated)}: paid ${aud(BUDGET.paid)}, reserved ${aud(BUDGET.reserved)}, being checked ${aud(BUDGET.checking)}, available ${aud(BUDGET.available)}">
+      ${BUCKETS.map(x=>`<span class="${x.sw}" style="width:${pct(x.amt)}%"></span>`).join('')}</div>
+    <div class="legend">${BUCKETS.map(x=>`<button data-b="${x.k}" aria-expanded="${S.p.legendOpen===x.k}" aria-controls="bexp"><span class="small"><span class="sw ${x.sw}"></span>${x.label}</span><strong>${aud(x.amt)}</strong></button>`).join('')}</div>
+    <p id="bexp" class="callout small" aria-live="polite">${S.p.legendOpen ? BUCKETS.find(x=>x.k===S.p.legendOpen).help : `${aud(BUDGET.allocated)} − ${aud(BUDGET.paid)} paid − ${aud(BUDGET.reserved)} reserved − ${aud(BUDGET.checking)} being checked = ${aud(BUDGET.available)} available. Each dollar is counted once.`}</p>`;
+  $$('[data-b]',b).forEach(x => x.onclick = () => { S.p.legendOpen = S.p.legendOpen===x.dataset.b ? null : x.dataset.b; renderBudget(); $(`[data-b="${x.dataset.b}"]`).focus(); });
+  if (S.p.tour) markSpot();
+}
+function renderInvoices(){
+  const ul = $('#inv'); if (!ul) return;
+  ul.innerHTML = INVOICES.map(i => `<li><button data-i="${i.id}"><span><strong>${esc(i.provider)}</strong><br><span class="small muted">${esc(i.service)} · ${i.date} · <span class="mono">${i.id}</span></span></span><span style="text-align:right"><strong>${aud(i.amount)}</strong><br><span class="pill ${i.status==='Paid'?'p-good':'p-warn'}">${i.status}</span></span></button></li>`).join('');
+  $$('[data-i]',ul).forEach(b => b.onclick = () => invoiceDialog(b.dataset.i));
+  if (S.p.tour) markSpot();
+}
+function openDialog(html){ $('#dlg-body').innerHTML = html; $('#dlg').showModal(); }
+$('#dlg-close').onclick = () => $('#dlg').close();
+function invoiceDialog(id){
+  const i = INVOICES.find(x=>x.id===id);
+  const similar = id==='INV-2101'||id==='INV-2102';
+  openDialog(`<span class="eyebrow mono">${i.id} · fictional</span><h2 id="dlg-title">${esc(i.provider)}</h2>
+    <dl class="facts" style="margin:14px 0"><div><dt>Service</dt><dd>${esc(i.service)}</dd></div><div><dt>Service date</dt><dd>${i.id==='INV-2103'?'Waiting for the provider':i.date}</dd></div><div><dt>Amount</dt><dd>${aud(i.amount)}</dd></div><div><dt>Status</dt><dd>${i.status}</dd></div></dl>
+    <p>${esc(i.note)}</p>
+    ${similar?`<div class="diff" style="margin-top:14px">${INVOICES.slice(0,2).map(x=>`<div><span class="src mono">${x.id}</span><p><strong>${aud(x.amount)}</strong> · ${x.status}</p><p class="small muted">${x.date} · ${esc(x.service)}</p></div>`).join('')}</div><p class="small muted" style="margin-top:8px">Same date and amount can mean two separate sessions. Asking us to check does not change your budget.</p>`:''}
+    <div class="row" style="margin-top:16px"><button class="btn primary" id="dlg-ask">${similar?'Ask our team to check':'Ask about this invoice'}</button></div>`);
+  $('#dlg-ask').onclick = () => { $('#dlg').close(); ask(similar ? `Please check whether ${id} is a duplicate` : `I have a question about ${id}`); $('#cq') && $('#cq').focus(); };
+}
+function reqStage(r){
+  const c = caseById(r.caseId);
+  if (!c) return {label:'Received', i:0};
+  if (c.status==='Resolved') return {label:'Explained', i:2, msg:c.pmsg};
+  if (c.status==='Held') return {label:'Waiting for information', i:1, msg:'We need a little more information. A person will contact you.'};
+  if (c.status==='Awaiting approval' || c.status==='Triaging') return {label:'Being checked', i:1};
+  return {label:'Received', i:0};
+}
+function renderRequests(){
+  const d = $('#reqs'); if (!d) return;
+  const R = S.p.requests;
+  d.innerHTML = R.length ? R.map(r => { const st = reqStage(r); return `<div class="callout" style="margin-bottom:10px"><div class="between"><strong>${esc(r.title)}</strong><span class="mono small">${r.caseId}</span></div>
+      <ol class="steps" aria-label="Progress">${['Received','Being checked','Explained'].map((s,i)=>`<li class="${i<st.i?'done':i===st.i?'now':''}">${i<st.i?'✓ ':''}${s}${i===st.i?'<span class="sr"> (current)</span>':''}</li>`).join('')}</ol>
+      ${st.msg?`<p class="small" style="margin-top:8px"><strong>From our team:</strong> ${esc(st.msg)}</p>`:'<p class="small muted" style="margin-top:8px">Your words and the invoice details are attached, so you won\'t need to explain again.</p>'}</div>`; }).join('')
+    : '<p class="muted small">No requests yet. If something doesn\'t look right, ask a person.</p>';
+}
+function renderLog(){
+  const log = $('#log'); if (!log) return;
+  log.innerHTML = '';
+  S.p.messages.forEach((m, idx) => log.append(msgEl(m, idx)));
+  if (S.p.busy){ const r = document.createElement('div'); r.className='msgrow'; r.setAttribute('aria-hidden','true'); r.innerHTML = avatar(28) + '<span class="typing"><i></i><i></i><i></i></span>'; log.append(r); }
+  log.scrollTop = log.scrollHeight;
+}
+function avatar(size, id){
+  return `<span class="av" ${id?`id="${id}"`:''} data-state="idle" aria-hidden="true" style="width:${size}px;height:${size}px"><svg width="${size}" height="${size}" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="var(--accent-soft)"/><path d="M7 48c1.5-9 8.5-13.5 17-13.5S39.5 39 41 48z" fill="var(--accent)"/><path d="M19.5 34.6q4.5 3 9 0" stroke="var(--accent-ink)" stroke-width="1.4" fill="none" opacity=".7"/><rect x="20.6" y="28.5" width="6.8" height="7" rx="2.5" fill="#b37752"/><path d="M14.4 20.5c-.9 6.5.6 11.2 3 13.4l1-7.4zM33.6 20.5c.9 6.5-.6 11.2-3 13.4l-1-7.4z" fill="#2b1d16"/><ellipse cx="24" cy="21" rx="9.2" ry="10.6" fill="#c98e66"/><path d="M14.6 21.4c-1.3-8.4 3.8-13.6 9.6-13.6 6.6 0 10.8 5.2 9.4 13.4-1.2-4-3.6-6.8-6.4-7.6-3 2.4-8.4 3.2-12.2 2.6-.3 1.6-.4 3.4-.4 5.2z" fill="#2b1d16"/><path d="M18.6 18.6q1.8-1 3.4 0M26 18.6q1.8-1 3.4 0" stroke="#2b1d16" stroke-width="1" fill="none" stroke-linecap="round"/><ellipse class="eye" cx="20.3" cy="21.6" rx="1.25" ry="1.5" fill="#1b1410"/><ellipse class="eye" cx="27.7" cy="21.6" rx="1.25" ry="1.5" fill="#1b1410"/><circle cx="18.4" cy="25" r="1.6" fill="#d9775d" opacity=".35"/><circle cx="29.6" cy="25" r="1.6" fill="#d9775d" opacity=".35"/><path class="mouth" d="M21 26.4q3 2.6 6 0" stroke="#7a3b2a" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></span>`;
+}
+function setAgent(state, status){
+  const a = $('#av-main'); if (a) a.dataset.state = state;
+  const s = $('#av-status'); if (s && status) s.textContent = status;
+}
+function msgEl(m, idx){
+  const d = document.createElement('div'); d.className = 'msg ' + m.role;
+  const w = document.createElement('span'); w.className='who';
+  w.textContent = m.role==='user' ? 'You' : m.role==='staff' ? `${m.name} · Person, Participant Support` : 'Kiri · AI guide';
+  const p = document.createElement('p'); p.textContent = m.text; d.append(w, p);
+  if (m.role === 'bot'){
+    const row = document.createElement('div'); row.className = 'msgrow';
+    row.innerHTML = avatar(28); row.append(d);
+    if (m.acts && m.acts.length) addActs(d, m);
+    return row;
+  }
+  return d;
+}
+function addActs(d, m){
+  const a = document.createElement('div'); a.className='acts';
+  m.acts.forEach(x => { const b = document.createElement('button'); b.className = 'btn sm ' + (x.primary?'primary':''); b.textContent = x.label; b.disabled = !!m.spent;
+    b.onclick = () => { if (m.spent) return; m.spent = true; renderLog(); ACTIONS[x.act](...(x.args||[])); }; a.append(b); });
+  d.append(a);
+}
+function bot(text, acts){
+  const full = (S.p.pre || '') + text; S.p.pre = '';
+  S.p.ai.calls++; S.p.ai.tin += 1800; S.p.ai.tout += Math.round(full.length/4);
+  S.p.messages.push({role:'bot', text:full, acts}); renderLog(); say('Kiri: ' + full);
+  speak(full);
+}
+function speak(text){
+  if (!S.p.voice || !('speechSynthesis' in window)){ setAgent('idle', 'Your AI guide. Not a person, but can bring one in.'); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.lang = 'en-AU'; u.rate = .95;
+  u.onstart = () => setAgent('speaking', 'Speaking…');
+  u.onend = u.onerror = () => setAgent('idle', 'Your AI guide. Not a person, but can bring one in.');
+  speechSynthesis.speak(u);
+}
+function user(text){ S.p.messages.push({role:'user', text}); renderLog(); }
+
+function ask(text){
+  const P = S.p;
+  user(text); P.queue.push(text);
+  if (!P.busy) pump();
+}
+function pump(){
+  const P = S.p, gen = S.gen;
+  if (!P.queue.length){ P.busy = false; renderLog(); return; }
+  P.busy = true; const t = P.queue.shift();
+  setAgent('thinking', 'Kiri is looking at your records…'); renderLog();
+  later(() => { if (gen !== S.gen) return; P.busy = false; answer(t); pump(); }, 650 + Math.min(900, t.length * 14));
+}
+function invoiceIn(t){ const m = t.match(/INV-\d{4}/i); return m ? m[0].toUpperCase() : null; }
+function answer(text){
+  const q = text.toLowerCase(); const inv = invoiceIn(text);
+  if (/\b(worried|stress|stressed|anxious|confus|confused|upset|scared|frustrat|frustrated|angry|annoyed)/.test(q)) S.p.pre = `I'm sorry this is causing you worry, ${PARTICIPANT.first}. Let's sort it out together. `;
+  if (/\b(are you|r u)\b.*\b(real|human|person|people|bot|robot|ai|machine)\b|talking to a (bot|robot|machine|real person|human|person)|is this a (bot|person|human)/.test(q)){
+    return bot("No, I'm not a person. I'm Kiri, an AI assistant. My replies are written by software, and in this demo they're scripted. If you'd rather talk to someone on our team, I can arrange that now.", [{label:'Talk to a person',primary:true,act:'confirm',args:['participant',inv,text]},{label:'Keep chatting with Kiri',act:'keep'}]);
+  }
+  if (/show me around|\btour\b|guide me|how (do|does) (i|this)|how to use|where (can|do) i find|take me to|show me where|navigate|help me (use|find)|find my/.test(q)){
+    const t = /invoice|bill/.test(q)?'invoices':/request|enquir/.test(q)?'requests':/budget|money|balance/.test(q)?'budget':/text|read|bigger|easy|contrast|voice|hear/.test(q)?'access':'portal';
+    bot(`Sure, ${PARTICIPANT.first}. Follow me. I'll light up each part of the page and explain it as we go. You can stop any time.`);
+    later(() => startTour(t), 500); return;
+  }
+  if (/\b(thanks|thank you|cheers)\b/.test(q) && q.length < 40) return bot(`You're welcome, ${PARTICIPANT.first}. I'm here whenever you need me.`);
+  if (/\b(person|human|someone|somebody|staff|call me|talk to|speak to|phone)\b/.test(q)){
+    return offerRequest(inv && /210[12]/.test(inv) ? 'duplicate' : 'participant', inv, text);
+  }
+  if (/check whether|please check|investigate/.test(q)) return offerRequest('duplicate', inv || 'INV-2102', text);
+  if (S.p.outage && /budget|left|available|balance|spend/.test(q)) return bot("I can't load your budget right now, so I won't guess a number. A person can tell you the figures.", [{label:'Ask a person',primary:true,act:'confirm',args:['participant',null,text]}]);
+  if (/twice|duplicate|same charge|double/.test(q)){ S.p.asked.add('dup'); return bot('There are two $150 physiotherapy invoices from Harbour Allied Health for 8 Nov. INV-2101 is paid. INV-2102 is being checked and has not been paid. They may be two separate sessions. Nothing has changed in your budget.', [{label:'Compare them',act:'compare'},{label:'Ask our team to check',primary:true,act:'confirm',args:['duplicate','INV-2102',text]}]); }
+  if (/budget|left|available|balance|spend|how much/.test(q)) return bot(`You have ${aud(BUDGET.available)} available until 31 Dec. From ${aud(BUDGET.allocated)}: ${aud(BUDGET.paid)} is paid, ${aud(BUDGET.reserved)} is reserved for agreed supports, and ${aud(BUDGET.checking)} is being checked. Each dollar is counted once.${S.p.asked.has('dup')?' The physio invoice you asked about earlier, INV-2102, is in the being-checked amount, so it is not counted twice.':''} I can't tell you whether a particular support can be funded; a person can help with that.`);
+  if (/90|ninety|deadline|time limit|claim window/.test(q)) return bot("From 1 December, the NDIS only pays a claim if it's made within 90 days of the day the support happened. Each session has its own 90 days. Our team watches these dates for you. The best help is asking your providers to send invoices soon after each session.");
+  if (/delay|late|unpaid|not paid|pending|payment|waiting/.test(q)) return bot("Bright Path Supports' invoice INV-2103 ($240) is waiting because the provider hasn't told us the date of the service. We've asked them, because claims need to reach the NDIS within 90 days of the service. You don't need to do anything. I can't promise a payment date.", [{label:'Ask a person about INV-2103',act:'confirm',args:['participant','INV-2103',text]}]);
+  if (/request|enquiry|update|status|track/.test(q)){ const R = S.p.requests; return bot(R.length ? R.map(r=>`${r.caseId}: ${reqStage(r).label.toLowerCase()}.`).join(' ') : "You don't have any requests yet. I can pass a question to a person whenever you like."); }
+  if (inv && INVOICES.some(i=>i.id===inv)) return bot(`${inv}: ${INVOICES.find(i=>i.id===inv).note}`, [{label:'Ask a person about it',act:'confirm',args:['participant',inv,text]}]);
+  bot("I'm a scripted demo, so I didn't understand that. I can explain your budget, similar charges or a delayed payment. Or I can pass your question to a person.", [{label:'Pass to a person',primary:true,act:'confirm',args:['participant',null,text]}]);
+}
+function offerRequest(kind, inv, text){
+  if (kind === 'duplicate') inv = 'INV-2102';
+  const existing = findRequest(inv);
+  if (existing){ attachNote(existing, text); return bot(`You already have request ${existing.caseId}${inv?` about ${inv}`:''}. I've added your new message to it, so a person sees everything together.`); }
+  bot(`I can ask a person to ${kind==='duplicate'?'check INV-2101 and INV-2102':'help'}${inv&&kind!=='duplicate'?` with ${inv}`:''}. I'll include your message and the invoice details so you don't have to explain again. Nothing about your payments will change. Shall I send it?`,
+    [{label:'Yes, send to a person',primary:true,act:'confirm',args:[kind, inv, text]},{label:'Not now',act:'decline'}]);
+}
+function findRequest(inv){ return S.p.requests.find(r => { const c = caseById(r.caseId); return c && OPEN(c) && (r.invoice||null) === (inv||null); }); }
+function attachNote(r, text){ const c = caseById(r.caseId); if (c){ c.notes.push(text); c.trace.push(['code','Coordinator','Same participant and invoice: added the message to the existing case instead of creating a new one.',{ms:30}]); } renderRequests(); }
+const ACTIONS = {
+  compare(){ invoiceDialog('INV-2102'); },
+  decline(){ bot("That's fine. Nothing has been sent. You can ask again any time."); },
+  keep(){ bot('Of course. Pick one of the choices below, or tell me in your own words.'); },
+  tour(name){ startTour(name); },
+  confirm(kind, inv, text){
+    if (kind==='duplicate') inv = 'INV-2102';
+    const existing = findRequest(inv);
+    if (existing){ attachNote(existing, text); return bot(`That's already with our team as ${existing.caseId}. I've added your message to it.`); }
+    const n = S.cases.filter(c=>c.fromPortal).length;
+    const id = 'CS-' + (4201 + n);
+    const dup = kind==='duplicate';
+    const c = {id, kind: dup?'duplicate':'participant', subject: dup?'Participant asks: was INV-2102 a duplicate?':`Participant question${inv?` about ${inv}`:''}`,
+      source:'Participant portal', participant:PARTICIPANT.name, invoice: dup?'INV-2101 / INV-2102':(inv||'—'), lines: dup ? ['2026-11-08'] : (inv==='INV-2103' ? [null] : null), ageH:0, priority:null, status:'New', owner:'Unassigned', fromPortal:true,
+      fields: dup ? [{label:'INV-2101',value:'$150 · 8 Nov · Paid',src:'FLOW invoice record'},{label:'INV-2102',value:'$150 · 8 Nov · Being checked',src:'FLOW invoice record'}] : [{label:'Participant',value:`${PARTICIPANT.name} (${PARTICIPANT.id})`,src:'Salesforce contact'},{label:'Available this period',value:aud(BUDGET.available),src:'FLOW budget snapshot'}],
+      draft: dup ? 'Ask Harbour Allied Health to confirm session times for INV-2101 and INV-2102 before INV-2102 is paid.' : 'Call the participant back to answer their question, using the attached records.',
+      pmsg: dup ? 'We asked Harbour Allied Health for the session times. If INV-2102 is a second session, we will pay it. If not, it will not be paid. Your budget is safe either way.' : 'Thanks for your question. A team member will call you today to go through it.',
+      trace:[['human','Participant','Confirmed they want a person to help.'],['code','Coordinator',`Checked for an open case for this participant and invoice: none found. Created ${id} with the conversation attached.`,{ms:60,calls:1}]], outcome:'', confirmed:{}, lookup:null, notes:[text], links:[]};
+    c.seedDraft = c.draft;
+    S.cases.unshift(c);
+    S.p.requests.unshift({caseId:id, invoice:inv||null, title: dup?'Check similar charges (INV-2101, INV-2102)':`Question${inv?` about ${inv}`:''}`});
+    renderRequests(); $('#nav-open').textContent = S.cases.filter(OPEN).length;
+    bot(`Sent. Your request is ${id}. It's in the team's queue with your message attached. You'll see progress under "Your requests". Your budget hasn't changed.`);
+  }
+};
+function syncRequest(c){ renderRequests(); }
+const TOUR_STEPS = {
+  money:['#budget','Your money','This is your money for October to December. The big number is what you can still use.'],
+  boxes:['#budget .legend','Where the rest went','These four boxes add up to your total. Tap any box and I will explain it in plain words.'],
+  listen:['#read','Listen instead','Prefer to listen? This reads your budget out loud.'],
+  bills:['[aria-labelledby="ih"]','Your bills','These are bills from your providers. Tap one to see the details, or to ask us about it.'],
+  similar:['[data-i="INV-2102"]','A bill to check','This physio bill looks like another one. Tap it and you will see both side by side.'],
+  reqs:['[aria-labelledby="rh"]','Your requests','When you ask us for help, it shows up here. You can see each step as our team works on it.'],
+  easy:['#easy','Simpler words','Easy Read shows your budget in short, simple sentences.'],
+  big:['#t-large','Bigger text','This makes the text bigger on every page. Higher contrast is just below it.'],
+  voice:['#voice','Hear me speak','Turn this on and I will read my answers out loud.'],
+  person:['#talkp','A real person','You can reach a real person on our team any time with this button.']
+};
+const TOURS = { portal:['money','boxes','bills','reqs','easy','big','person'], budget:['money','boxes','listen'], invoices:['bills','similar'], requests:['reqs'], access:['easy','big','voice'] };
+function markSpot(){
+  $$('.spot').forEach(e => e.classList.remove('spot'));
+  const T = S.p.tour; if (!T) return null;
+  const el = $(T.steps[T.i][0]); if (el) el.classList.add('spot'); return el;
+}
+function startTour(name){
+  if (location.hash !== '#participant'){ go('participant'); later(() => startTour(name), 150); return; }
+  const steps = (TOURS[name]||TOURS.portal).map(k => TOUR_STEPS[k]).filter(st => $(st[0]));
+  if (!steps.length){ bot("I can't show that part right now. A person can help you find it.", [{label:'Talk to a real person',primary:true,act:'confirm',args:['participant',null,'Asked for help finding something']}]); return; }
+  S.p.tour = {steps, i:0, name}; showStep();
+}
+function showStep(){
+  const T = S.p.tour, g = $('#guide'); if (!T) return;
+  const [sel, title, text] = T.steps[T.i]; const last = T.i === T.steps.length - 1;
+  const el = markSpot();
+  if (el) el.scrollIntoView({block:'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+  g.innerHTML = `${avatar(44)}<div><span class="eyebrow">Step ${T.i+1} of ${T.steps.length} · Kiri, AI guide</span><h3 id="g-h">${esc(title)}</h3><p>${esc(text)}</p></div>
+    <div class="row"><button class="btn quiet" id="g-stop">Stop the tour</button><span class="row"><button class="btn" id="g-back" ${T.i===0?'disabled':''}>Back</button><button class="btn primary" id="g-next">${last?'Finish':'Next'}</button></span></div>`;
+  g.hidden = false;
+  $('#g-next').onclick = () => { if (last) stopGuide(false); else { T.i++; showStep(); } };
+  $('#g-back').onclick = () => { if (T.i>0){ T.i--; showStep(); } };
+  $('#g-stop').onclick = () => stopGuide(true, true);
+  $('#g-next').focus({preventScroll:true});
+  say(`${title}. ${text}`); speak(text);
+}
+function stopGuide(silent, stopped){
+  const had = !!S.p.tour; S.p.tour = null; markSpot(); const g = $('#guide'); g.hidden = true; g.innerHTML = '';
+  if (!had) return;
+  if (!silent) bot(`That's the tour, ${PARTICIPANT.first}. Pick a choice below, or ask me anything in your own words.`);
+  if (stopped) bot('No problem, I stopped the tour. I am here if you need me.');
+  const q = $('#cq'); if (q && !silent) q.focus();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.p.tour) stopGuide(true, true); });
+function readAloud(){
+  const btn = $('#read');
+  if (!('speechSynthesis' in window)){ toast('Read aloud is not available in this browser. All text stays on screen.'); return; }
+  if (speechSynthesis.speaking){ speechSynthesis.cancel(); btn.textContent='Read summary aloud'; return; }
+  const text = S.p.outage ? "We can't load your budget right now. Your money is safe." : `You have ${BUDGET.available} dollars available this period. ${BUDGET.paid} dollars is paid, ${BUDGET.reserved} dollars is reserved, and ${BUDGET.checking} dollars is being checked.`;
+  const u = new SpeechSynthesisUtterance(text); u.lang='en-AU'; u.rate=.92;
+  u.onend = u.onerror = () => { btn.textContent='Read summary aloud'; };
+  speechSynthesis.speak(u); btn.textContent='Stop reading';
+}
+
+/* ---------- Reports ---------- */
+function viewReports(){
+  const reasons = [['Payment status enquiry',182],['Budget question',141],['Missing invoice information',64],['Possible duplicate',37],['Sync mismatch',21],['Other',55]];
+  const max = Math.max(...reasons.map(r=>r[1])); const total = reasons.reduce((a,r)=>a+r[1],0);
+  const ages = [['Under 1 day',96],['1–2 days',41],['3–5 days',18],['Over 5 days',7]]; const maxA = Math.max(...ages.map(a=>a[1]));
+  const sess = S.cases;
+  $('#view').innerHTML = `
+  <div class="pagehead"><div><span class="eyebrow">Reporting · weekly view for the GM and Ops lead</span><h1>Service report</h1>
+    <p>The handful of numbers that show whether operations are getting easier for staff and clearer for participants. <strong>All figures are illustrative examples, not Provider Choice data.</strong></p></div></div>
+  <div class="kpis">
+    <div class="kpi"><span>Contacts, last 30 days</span><strong>${total}</strong><span class="small">Example</span></div>
+    <div class="kpi"><span>Answerable from records</span><strong>${Math.round((182+141)/total*100)}%</strong><span class="small">Status + budget questions</span></div>
+    <div class="kpi"><span>Repeat contact in 7 days</span><strong>18%</strong><span class="small">Example baseline to beat</span></div>
+    <div class="kpi"><span>Median time to first action</span><strong>6.5h</strong><span class="small">Example</span></div>
+  </div>
+  <div class="grid2">
+    <section class="panel"><header><h2>Why people contact us</h2><span class="small muted">Last 30 days · example</span></header>
+      <div class="stack">${reasons.map(r=>`<div class="hbar"><span>${r[0]}</span><span class="track" aria-hidden="true"><span class="fill" style="width:${r[1]/max*100}%;display:block"></span></span><span class="v">${r[1]}</span></div>`).join('')}</div>
+      <p class="small muted" style="margin-top:12px">The top two reasons can be answered from records. That is where a clearer participant view should reduce contact first.</p></section>
+    <section class="panel"><header><h2>How long open cases have waited</h2><span class="small muted">Today · example</span></header>
+      <div class="stack">${ages.map(r=>`<div class="hbar"><span>${r[0]}</span><span class="track" aria-hidden="true"><span class="fill" style="width:${r[1]/maxA*100}%;display:block;background:${r[0]==='Over 5 days'?'var(--bad)':r[0]==='3–5 days'?'var(--warn)':'var(--accent)'}"></span></span><span class="v">${r[1]}</span></div>`).join('')}</div>
+      <p class="small muted" style="margin-top:12px">Triage sorts by urgency and age, so the oldest high-priority work surfaces first.</p></section>
+  </div>
+  <section class="panel"><header><h2>This demo session (live)</h2><span class="small muted">Updates as you use the demo</span></header>
+    <div class="tablewrap"><table><thead><tr><th scope="col">Measure</th><th scope="col" class="num">Value</th><th scope="col">Why it matters</th></tr></thead><tbody>
+      <tr><td>Cases resolved by a person</td><td class="num">${sess.filter(c=>c.status==='Resolved').length}</td><td>Every action had a named approver</td></tr>
+      <tr><td>Cases held</td><td class="num">${sess.filter(c=>c.status==='Held').length}</td><td>Uncertain work stops instead of guessing</td></tr>
+      <tr><td>Participant requests received</td><td class="num">${S.p.requests.length}</td><td>Each arrived with context attached</td></tr>
+      <tr><td>Duplicate requests prevented</td><td class="num">${sess.reduce((n,c)=>n+Math.max(0,c.notes.length-1),0)}</td><td>Follow-ups joined the existing case</td></tr>
+      <tr><td>Facts confirmed instead of typed</td><td class="num">${sess.reduce((n,c)=>n+Object.values(c.confirmed).filter(Boolean).length,0)}</td><td>Less re-keying, fewer typos</td></tr>
+    </tbody></table></div></section>
+  <section class="panel"><h2>How I'd judge whether this works</h2>
+    <div class="grid3 small" style="margin-top:8px">
+      <div class="stack"><h3>Effort</h3><p>Handling time per case and fields re-keyed, measured for 4–6 weeks before any change.</p></div>
+      <div class="stack"><h3>Clarity</h3><p>Repeat contact within 7 days and budget questions per 1,000 participants.</p></div>
+      <div class="stack"><h3>Safety</h3><p>Zero cross-participant exposure, zero duplicate writes, and every AI draft reviewed. A cheaper but worse service fails.</p></div>
+    </div></section>`;
+}
+
+/* ---------- Accessibility tracker ---------- */
+const A11Y = [
+  ['Focus outline too faint (2.28:1)','1.4.11 Non-text contrast','Previous version','Fixed','Focus colour now meets 3:1 in both themes'],
+  ['Secondary text below AA (4.18:1)','1.4.3 Contrast','Previous version','Fixed','Muted text token darkened; checked in both themes'],
+  ['Budget chart colours indistinct (1.44:1)','1.4.11, 1.4.1 Use of colour','Previous version','Fixed','Replaced ring with bar plus patterns, borders and a text legend'],
+  ['Text-size and contrast controls only on one screen','Consistency','Previous version','Fixed','Controls apply to every screen and are remembered'],
+  ['Current page not announced in navigation','4.1.2 Name, role, value','Previous version','Fixed','aria-current="page" on the active link'],
+  ['Typed question lost while assistant was busy','3.3 Input assistance','Previous version','Fixed','Questions are queued, never discarded'],
+  ['Request for a person answered automatically','Safety (not WCAG)','Previous version','Fixed','Asking for a person always comes first'],
+  ['Focus not moved after changing page','2.4.3 Focus order','Previous version','Fixed','Focus moves to each page heading'],
+  ['No Easy Read version of the budget','Cognitive accessibility','Previous version','Fixed','Easy Read toggle on the participant view'],
+  ['Screen-reader run-through not done','Manual testing','This version','Open','Needs NVDA and VoiceOver passes'],
+  ['Not tested with participants or nominees','User testing','This version','Open','Needs moderated sessions, including assistive-tech users'],
+  ['Only English','Language','This version','Open','Translation and interpreter route not designed']
+];
+function viewAccess(){
+  const fixed = A11Y.filter(a=>a[3]==='Fixed').length;
+  $('#view').innerHTML = `
+  <div class="pagehead"><div><span class="eyebrow">Reporting · accessibility</span><h1>Accessibility tracker</h1>
+    <p>Real findings from auditing the earlier version of this prototype, and what changed. WCAG 2.2 AA is the reference, not a compliance claim: automated checks catch only part of the problem.</p></div></div>
+  <div class="kpis">
+    <div class="kpi"><span>Issues found</span><strong>${A11Y.length}</strong><span class="small">Code review + contrast checks</span></div>
+    <div class="kpi"><span>Fixed in this version</span><strong>${fixed}</strong><span class="small">Re-checked</span></div>
+    <div class="kpi"><span>Still open</span><strong>${A11Y.length-fixed}</strong><span class="small">Need people, not code</span></div>
+    <div class="kpi"><span>Automated scan (axe)</span><strong id="axe-k">See below</strong><span class="small">Run on this build</span></div>
+  </div>
+  <section class="panel"><header><h2>Testing coverage</h2></header>
+    <div class="tablewrap"><table><thead><tr><th scope="col">Level</th><th scope="col">What it finds</th><th scope="col">Status</th></tr></thead><tbody>
+      <tr><td>Automated scan</td><td>Missing labels, contrast, ARIA misuse</td><td id="axe-s"><span class="pill p-good">Run on this build</span></td></tr>
+      <tr><td>Keyboard-only walkthrough</td><td>Traps, order, visible focus</td><td><span class="pill p-good">Done (scripted)</span></td></tr>
+      <tr><td>Screen readers (NVDA, VoiceOver)</td><td>Announcements, reading order</td><td><span class="pill p-warn">Not yet</span></td></tr>
+      <tr><td>Zoom 200–400%, phone width</td><td>Reflow, clipping</td><td><span class="pill p-good">Checked at phone width</span></td></tr>
+      <tr><td>Participants and nominees</td><td>Whether people understand it</td><td><span class="pill p-bad">Not yet — essential</span></td></tr>
+    </tbody></table></div></section>
+  <section class="panel"><header><h2>Issue log</h2><span class="small muted">Newest status first</span></header>
+    <div class="tablewrap"><table><thead><tr><th scope="col">Issue</th><th scope="col">Reference</th><th scope="col">Found in</th><th scope="col">Status</th><th scope="col">Change</th></tr></thead><tbody>
+    ${[...A11Y].sort((a,b)=>(a[3]==='Open'?0:1)-(b[3]==='Open'?0:1)).map(a=>`<tr><td>${a[0]}</td><td>${a[1]}</td><td>${a[2]}</td><td><span class="pill ${a[3]==='Fixed'?'p-good':'p-warn'}">${a[3]}</span></td><td>${a[4]}</td></tr>`).join('')}
+    </tbody></table></div></section>`;
+}
+
+/* ---------- How the agents work ---------- */
+function viewAgents(){
+  const nodes = [['Code','Coordinator','Opens a workflow, checks access, keeps state and keys. Not an AI.'],['Model','Triage agent','Suggests route, priority and reason from the case text.'],['Tools','Evidence agent','Reads FLOW and Salesforce through read-only adapters.'],['Code','Rules','Blocks restricted data, requires confirmed facts, never acts on confidence.'],['Model','Drafting agent','Writes the next step in plain words, grounded on the records.'],['Person','Staff approval','Edits, approves or holds. Only then is anything written, with a key and read-back.']];
+  $('#view').innerHTML = `
+  <div class="pagehead"><div><span class="eyebrow">Design · agent orchestration</span><h1>How the agents work</h1>
+    <p>Several small agents, each with one job and its own permissions, coordinated by ordinary code. A person approves every action. This is the pattern I used with Temporal and Google ADK at HeartBug, adapted to this domain.</p></div></div>
+  <section class="panel"><h2>One case, end to end</h2>
+    <div class="flow" style="margin-top:12px" role="list">${nodes.map(n=>`<div class="node" role="listitem"><span class="k">${n[0]}</span><strong>${n[1]}</strong><span class="small muted">${n[2]}</span></div>`).join('')}</div></section>
+  <div class="grid2">
+    <section class="panel"><h2>Why separate agents here</h2><ul class="small" style="margin:8px 0 0;padding-left:18px;display:grid;gap:6px">
+      <li><strong>Different permissions.</strong> The evidence agent can read records; the drafting agent can't. Neither can write.</li>
+      <li><strong>Easier to test.</strong> Triage accuracy, evidence completeness and draft quality are measured separately.</li>
+      <li><strong>Replaceable.</strong> A rule can replace the triage agent for case types where it's enough.</li></ul></section>
+    <section class="panel"><h2>Where plain code is better</h2><div class="tablewrap"><table style="margin-top:8px"><tbody>
+      <tr><td>Balances and totals</td><td>Calculated, never generated</td></tr>
+      <tr><td>Who may see what</td><td>Checked on every call</td></tr>
+      <tr><td>Creating a case</td><td>Idempotent, one per participant and invoice</td></tr>
+      <tr><td>After a timeout</td><td>Look up by key; never retry blind</td></tr>
+      <tr><td>Fraud or adverse findings</td><td>People only; AI never accuses</td></tr></tbody></table></div></section>
+  </div>
+  <section class="panel"><h2>The same discipline for the engineering team</h2>
+    <p class="small muted" style="margin-top:4px">Separate from participant-facing AI: how three engineers could use AI to deliver faster without lowering quality.</p>
+    <div class="grid3 small" style="margin-top:12px">
+      <div class="stack"><h3>Before code</h3><p>Testable acceptance criteria on every ticket. Short decision records for changes that span Salesforce and AWS.</p></div>
+      <div class="stack"><h3>While coding</h3><p>AI drafts code and tests from repository context; a named engineer reviews and owns each small pull request.</p></div>
+      <div class="stack"><h3>Releasing</h3><p>Automated tests and security scans for Salesforce and TypeScript alike, staged releases, rollback, and runbooks two people can follow.</p></div>
+    </div></section>`;
+}
+
+/* ---------- Costs, links, escalation ---------- */
+const HUMAN_MIN = {status:3, mismatch:4, timeout:3, missing:3, review:12, duplicate:6, participant:6};
+const RATES = Object.assign({pin:3, pout:15, tool:0.0004, staff:60, sfSeats:25, sfActive:19, sfSeat:250, sfAddons:1500, casesMonth:2500}, store.get('care-ops-rates') || {});
+const sfMonthly = () => RATES.sfSeats*RATES.sfSeat + RATES.sfAddons;
+const sfPerCase = () => RATES.casesMonth > 0 ? sfMonthly()/RATES.casesMonth : 0;
+function stepCost(st){ const m = st[3] || {}; return { ai:((m.tin||0)*RATES.pin + (m.tout||0)*RATES.pout)/1e6, tool:(m.calls||0)*RATES.tool, human:(m.mins||0)/60*RATES.staff, mins:m.mins||0, tin:m.tin||0, tout:m.tout||0, ms:m.ms||0 }; }
+function caseCost(c){ return c.trace.map(stepCost).reduce((a,b) => { for (const k in b) a[k]=(a[k]||0)+b[k]; return a; }, {ai:0,tool:0,human:0,mins:0,tin:0,tout:0,ms:0}); }
+const fmtc = n => n === 0 ? '$0' : n < 0.01 ? '$' + n.toFixed(4) : n < 1 ? '$' + n.toFixed(3) : '$' + n.toFixed(2);
+function costLine(c){ const k = caseCost(c); return `AI ${fmtc(k.ai+k.tool)} · people ${k.mins} min (${fmtc(k.human)}) · total ${fmtc(k.ai+k.tool+k.human)}`; }
+function linkWork(c, tool, list, title){
+  S.cu = (S.cu||0) + 1;
+  const id = tool === 'ClickUp' ? `CU-86c${(2140+S.cu).toString(36)}` : `${list}`;
+  c.links.push({tool, id, list, title});
+  c.trace.push(['tool', tool + ' adapter', tool === 'ClickUp' ? `Created task ${id} in ${esc(list)}: “${esc(title)}” (simulated).` : `Posted alert to ${esc(list)}: ${esc(title)} (simulated).`, {ms:420, calls:1}]);
+}
+function linkChips(c){
+  const base = [['Salesforce', c.id, 'sf'], ...(c.invoice && c.invoice !== '—' ? [['FLOW', c.invoice, '']] : []), ['Workflow', 'WF-'+c.id.slice(3), ''], ['Trace', 'TR-'+c.id.slice(3), '']];
+  return base.map(([t,id,k]) => `<span class="chip ${k}"><b>${t}</b><span class="mono">${esc(id)}</span></span>`).join('') +
+    c.links.map(l => `<span class="chip ${l.tool==='ClickUp'?'cu':'sl'}" title="${esc(l.title)}"><b>${l.tool}</b><span class="mono">${esc(l.id)}</span>${l.tool==='ClickUp'?`<span class="small muted">${esc(l.list)}</span>`:''}</span>`).join('');
+}
+function escalation(c){
+  if (c.status === 'Held' && c.heldReason === 'platform') return ['Platform Support on call', 'Salesforce state unknown after timeout'];
+  if (c.status === 'Held') return ['Operations follow-up', 'Staff needed more information'];
+  if (c.kind === 'review' && c.trace.length) return ['Compliance specialist', 'Restricted review indicator'];
+  if (c.fromPortal) return ['Participant Support', 'Participant asked for a person'];
+  return null;
+}
+const worked = () => S.cases.filter(c => c.trace.some(t => t[1] === 'Triage agent'));
+function ratesPanel(){
+  return `<details class="panel"><summary><strong>Cost assumptions</strong> <span class="small muted">· edit to match your contracts; figures recalculate</span></summary>
+    <div class="rates" style="margin-top:12px">
+      ${[['pin','Model input, $ per 1M tokens',0.01],['pout','Model output, $ per 1M tokens',0.01],['tool','Tool or API call, $ each',0.0001],['staff','Loaded staff cost, $ per hour',1]].map(([k,l,st])=>`<div class="field"><label for="rate-${k}">${l}</label><input id="rate-${k}" type="number" min="0" step="${st}" value="${RATES[k]}"></div>`).join('')}
+    </div>
+    <h3 style="margin-top:16px">Salesforce <span class="small muted">· example values; replace with your contract</span></h3>
+    <div class="rates" style="margin-top:8px">
+      ${[['sfSeats','Licensed seats',1],['sfActive','Seats used each week',1],['sfSeat','Cost per seat, $ per month',1],['sfAddons','Add-ons and storage, $ per month',10],['casesMonth','Cases handled per month',10]].map(([k,l,st])=>`<div class="field"><label for="rate-${k}">${l}</label><input id="rate-${k}" type="number" min="0" step="${st}" value="${RATES[k]}"></div>`).join('')}
+    </div><p class="small muted" style="margin-top:8px">Staff minutes per action are assumptions too: ${Object.entries(HUMAN_MIN).map(([k,v])=>`${k} ${v} min`).join(', ')}; +2 min if the draft was edited, +5 if held.</p></details>`;
+}
+function bindRates(rerender){
+  ['pin','pout','tool','staff','sfSeats','sfActive','sfSeat','sfAddons','casesMonth'].forEach(k => { const i = $('#rate-'+k); if (i) i.onchange = () => { const v = parseFloat(i.value); if (!(v >= 0)){ i.value = RATES[k]; toast('Enter a number of zero or more.'); return; } RATES[k] = v; store.set('care-ops-rates', RATES); rerender(); const n=$('#rate-'+k); if (n){ n.closest('details').open = true; n.focus(); } }; });
+}
+function emptyDemo(where){
+  return `<section class="panel"><h2>No cases have been worked yet</h2><p class="muted" style="margin-top:6px">Run the demo backlog and the ${where} fills in from what the agents and staff actually do.</p><div class="row" style="margin-top:12px"><button class="btn primary" id="rundemo">Run the demo backlog</button></div></section>`;
+}
+function bindEmpty(){ const b = $('#rundemo'); if (b) b.onclick = () => { go('ops'); later(runTriage, 200); }; }
+
+function sfPanel(){
+  const unused = Math.max(0, RATES.sfSeats - RATES.sfActive);
+  return `<section class="panel"><header><h2>Salesforce cost</h2><span class="small muted">Example values · <a href="#health">questions for month one</a></span></header>
+    <div class="kpis"><div class="kpi"><span>Monthly platform cost</span><strong>${aud(sfMonthly())}</strong><span class="small">${RATES.sfSeats} seats × ${aud(RATES.sfSeat)} + ${aud(RATES.sfAddons)} add-ons</span></div>
+      <div class="kpi"><span>Salesforce cost per case</span><strong>${fmtc(sfPerCase())}</strong><span class="small">At ${RATES.casesMonth.toLocaleString()} cases a month</span></div>
+      <div class="kpi"><span>Seats not used weekly</span><strong>${unused}</strong><span class="small">${aud(unused*RATES.sfSeat)} a month to review</span></div>
+      <div class="kpi"><span>If volume grows 30%</span><strong>${fmtc(RATES.casesMonth ? sfMonthly()/(RATES.casesMonth*1.3) : 0)}</strong><span class="small">Per case, same contract</span></div></div>
+    <p class="small muted" style="margin-top:10px">Replace the example values in Cost assumptions with the real contract and login data. Agents don't cut licence cost on their own; the levers are unused seats, add-ons, API limits, and deciding deliberately what stays in Salesforce.</p></section>`;
+}
+function claimPanel(){
+  const open = S.cases.filter(OPEN).map(c => ({c, w:claimWindow(c)})).filter(x => x.w && x.w.state !== 'paid');
+  const lines = open.flatMap(x => x.w.rows ? x.w.rows : [{left:null}]);
+  const past = lines.filter(r => r.left !== null && r.left <= 0).length, near = lines.filter(r => r.left !== null && r.left > 0 && r.left <= 14).length, unk = lines.filter(r => r.left === null).length;
+  return `<section class="panel"><header><h2>90-day claiming rule</h2><span class="small muted">Rule starts 1 Dec 2026 · demo date 12 Nov 2026</span></header>
+    <div class="kpis"><div class="kpi"><span>Service lines within 14 days</span><strong>${near}</strong><span class="small">Act this week</span></div>
+      <div class="kpi"><span>Service dates missing</span><strong>${unk}</strong><span class="small">Clock can't be checked</span></div>
+      <div class="kpi"><span>Past 90 days</span><strong>${past}</strong><span class="small">Extra NDIA checks now; not payable from 1 Dec</span></div>
+      <div class="kpi"><span>Open cases with a claim</span><strong>${open.length}</strong><span class="small">Sorted by days left in triage</span></div></div>
+    <p class="small muted" style="margin-top:10px">This is the dated risk I'd watch first: every day an invoice waits for missing details or a sync fix comes out of the 90 days.</p></section>`;
+}
+/* ---------- Executive dashboard ---------- */
+function viewExec(){
+  const W = worked();
+  const costs = W.map(c => ({c, k:caseCost(c)}));
+  const sfc = sfPerCase();
+  const tot = costs.reduce((a,{k}) => ({ai:a.ai+k.ai+k.tool, hum:a.hum+k.human, mins:a.mins+k.mins, sf:a.sf+sfc}), {ai:0,hum:0,mins:0,sf:0});
+  const esc_ = W.map(c => [c, escalation(c)]).filter(x => x[1]);
+  const decided = W.filter(c => c.status==='Resolved' || c.status==='Held');
+  const userQs = S.p.messages.filter(m => m.role==='user').length;
+  const handed = S.p.requests.length;
+  const kiriCost = (S.p.ai.tin*RATES.pin + S.p.ai.tout*RATES.pout)/1e6;
+  const max = Math.max(0.0001, ...costs.map(({k}) => k.ai+k.tool+k.human+sfc));
+  $('#view').innerHTML = `
+  <div class="pagehead"><div><span class="eyebrow">Reporting · for the GM Delivery and Innovation</span><h1>Executive dashboard</h1>
+    <p>Cost per case, where people are still needed, and what the AI handles alone. <strong>Calculated live from this demo session</strong> using the cost assumptions below; nothing here is Provider Choice data.</p></div></div>
+  ${W.length ? `
+  <div class="kpis">
+    <div class="kpi"><span>Cases worked</span><strong>${W.length}</strong><span class="small">${decided.length} decided by a person</span></div>
+    <div class="kpi"><span>Average cost per case</span><strong>${fmtc((tot.ai+tot.hum+tot.sf)/W.length)}</strong><span class="small">AI ${fmtc(tot.ai/W.length)} · people ${fmtc(tot.hum/W.length)} · Salesforce ${fmtc(sfc)}</span></div>
+    <div class="kpi"><span>Human escalation rate</span><strong>${Math.round(esc_.length/W.length*100)}%</strong><span class="small">${esc_.length} of ${W.length} needed a specialist or follow-up</span></div>
+    <div class="kpi"><span>Kiri answered alone</span><strong>${userQs ? Math.round(Math.max(0,userQs-handed)/userQs*100)+'%' : '—'}</strong><span class="small">${userQs} question${userQs===1?'':'s'} · ${handed} passed to a person</span></div>
+  </div>
+  ${claimPanel()}
+  <section class="panel"><header><h2>Cost per case</h2><span class="small"><span class="sw2 c-ai"></span>AI and tools <span class="sw2 c-tool" style="margin-left:10px"></span>Salesforce share <span class="sw2 c-hum" style="margin-left:10px"></span>Staff time</span></header>
+    <p class="callout info small">${(()=>{const T = tot.ai+tot.hum+tot.sf; const pc = v => { const x = T ? v/T*100 : 0; return x < 1 ? 'under 1%' : Math.round(x)+'%'; }; return `Staff time is ${pc(tot.hum)} of cost per case, Salesforce ${pc(tot.sf)}, AI ${pc(tot.ai)}. Value comes from saving staff minutes and right-sizing the platform, not from cheaper models.`; })()}</p>
+    <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th scope="col">Case</th><th scope="col">Split</th><th scope="col" class="num">AI + tools</th><th scope="col" class="num">Salesforce share</th><th scope="col" class="num">Staff</th><th scope="col" class="num">Total</th><th scope="col">Status</th></tr></thead><tbody>
+      ${costs.sort((a,b)=>(b.k.ai+b.k.tool+b.k.human)-(a.k.ai+a.k.tool+a.k.human)).map(({c,k}) => { const t=k.ai+k.tool+k.human+sfc; return `<tr><td><span class="mono">${c.id}</span><br><span class="small muted">${esc(c.subject)}</span></td>
+        <td style="min-width:140px"><div class="stackbar" style="width:${Math.max(4,t/max*100)}%" role="img" aria-label="AI ${fmtc(k.ai+k.tool)}, Salesforce ${fmtc(sfc)}, staff ${fmtc(k.human)}"><span class="c-ai" style="width:${t?(k.ai+k.tool)/t*100:0}%"></span><span class="c-tool" style="width:${t?sfc/t*100:0}%"></span><span class="c-hum" style="width:${t?k.human/t*100:0}%"></span></div></td>
+        <td class="num">${fmtc(k.ai+k.tool)}</td><td class="num">${fmtc(sfc)}</td><td class="num">${k.mins} min · ${fmtc(k.human)}</td><td class="num"><strong>${fmtc(t)}</strong></td><td>${statusPill(c)}</td></tr>`; }).join('')}
+    </tbody></table></div>
+    <p class="small muted" style="margin-top:8px">Cases waiting for approval show no staff time yet; it's added when a person decides. The Salesforce share is the monthly platform cost divided by cases per month.</p></section>
+  ${sfPanel()}
+  <div class="grid2">
+    <section class="panel"><header><h2>Human escalations</h2><span class="small muted">${esc_.length} in this session</span></header>
+      ${esc_.length ? `<div class="tablewrap"><table><thead><tr><th scope="col">Case</th><th scope="col">To whom</th><th scope="col">Why</th><th scope="col">Linked work</th></tr></thead><tbody>
+      ${esc_.map(([c,[who,why]]) => `<tr><td class="mono">${c.id}</td><td>${who}</td><td>${why}</td><td>${c.links.filter(l=>l.tool!=='Salesforce').map(l=>`<span class="chip ${l.tool==='ClickUp'?'cu':'sl'}"><b>${l.tool}</b><span class="mono">${esc(l.id)}</span></span>`).join(' ') || '<span class="small muted">Salesforce case only</span>'}</td></tr>`).join('')}
+      </tbody></table></div>` : '<p class="muted small">None yet. Approve the Compliance case, hold a case, or raise a participant request to see escalations here.</p>'}
+    </section>
+    <section class="panel"><header><h2>Kiri, participant assistant</h2></header>
+      <div class="tablewrap"><table><tbody>
+        <tr><td>Questions from participants</td><td class="num">${userQs}</td></tr>
+        <tr><td>Answered without a person</td><td class="num">${Math.max(0,userQs-handed)}</td></tr>
+        <tr><td>Passed to a person, with context</td><td class="num">${handed}</td></tr>
+        <tr><td>AI cost, all conversations</td><td class="num">${fmtc(kiriCost)}</td></tr>
+        <tr><td>AI cost per answer</td><td class="num">${S.p.ai.calls ? fmtc(kiriCost/S.p.ai.calls) : '—'}</td></tr>
+      </tbody></table></div>
+      <p class="small muted" style="margin-top:8px">The real test is whether answered questions stay answered: repeat contact within 7 days, measured in a pilot.</p></section>
+  </div>` : emptyDemo('dashboard')}
+  ${ratesPanel()}
+  <section class="panel"><h2>What a production version adds</h2><ul class="small" style="margin:8px 0 0;padding-left:18px;display:grid;gap:4px">
+    <li>Traces from every agent and integration in one place (OpenTelemetry), joined by trace ID to Salesforce, FLOW and ClickUp.</li>
+    <li>A monthly AI budget with alerts, and cost per case trended weekly against the pre-pilot baseline.</li>
+    <li>Escalation reasons reviewed each week with Ops, so rules and prompts improve where people are needed most.</li></ul></section>`;
+  bindRates(viewExec); bindEmpty();
+}
+
+/* ---------- Agent observability ---------- */
+function viewObs(){
+  const W = worked();
+  const agents = {};
+  W.forEach(c => c.trace.forEach(st => { if (st[0]==='human') return; const a = agents[st[1]] || (agents[st[1]] = {kind:st[0], runs:0, ms:0, tin:0, tout:0, cost:0, calls:0}); const k = stepCost(st); a.runs++; a.ms+=k.ms; a.tin+=k.tin; a.tout+=k.tout; a.cost+=k.ai+k.tool; a.calls+=(st[3]?.calls||0); }));
+  if (S.p.ai.calls) agents['Kiri (participant)'] = {kind:'model', runs:S.p.ai.calls, ms:S.p.ai.calls*1100, tin:S.p.ai.tin, tout:S.p.ai.tout, cost:(S.p.ai.tin*RATES.pin+S.p.ai.tout*RATES.pout)/1e6, calls:0};
+  const allSteps = W.flatMap(c => c.trace);
+  const handoffs = W.reduce((n,c) => n + c.trace.filter((t,i) => i && t[1] !== c.trace[i-1][1]).length, 0);
+  const cu = W.flatMap(c => c.links).filter(l => l.tool==='ClickUp').length, sl = W.flatMap(c => c.links).filter(l => l.tool==='Slack').length;
+  const sel = caseById(S.obsSel) && worked().includes(caseById(S.obsSel)) ? S.obsSel : (W[0] && W[0].id);
+  const c = sel && caseById(sel);
+  let wf = '';
+  if (c){
+    const steps = c.trace.map(st => ({st, k:stepCost(st)}));
+    const span = Math.max(1, steps.reduce((a,{k})=>a+k.ms,0)); let t0 = 0, cum = 0;
+    wf = `<section class="panel"><header><h2>Case trace</h2><span><label class="sr" for="obs-case">Choose case</label><select id="obs-case" class="sel" style="width:auto;max-width:100%">${W.map(x=>`<option value="${x.id}" ${x.id===sel?'selected':''}>${x.id} · ${esc(x.subject.slice(0,40))}</option>`).join('')}</select></span></header>
+      <div class="row">${linkChips(c)}</div>
+      <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th scope="col">#</th><th scope="col">Step</th><th scope="col">What happened</th><th scope="col">Timeline (automated time)</th><th scope="col" class="num">Tokens in / out</th><th scope="col" class="num">Cost</th><th scope="col" class="num">Running total</th></tr></thead><tbody>
+      ${steps.map(({st,k},i) => { const left = t0/span*100, w = k.ms/span*100; t0 += k.ms; const cost = k.ai+k.tool+k.human; cum += cost;
+        return `<tr><td class="num">${i+1}</td><td><span class="tag ${st[0]}">${esc(st[1])}</span></td><td class="small">${st[2]}</td>
+        <td>${st[0]==='human' ? `<span class="small">${k.mins ? k.mins+' min of staff time' : 'Participant action'}</span>` : `<div class="wf" role="img" aria-label="${k.ms} ms starting at ${Math.round(t0-k.ms)} ms"><span class="${st[0]==='model'?'c-ai':st[0]==='tool'?'c-tool':'c-hum'}" style="left:${left}%;width:${Math.max(1.5,w)}%"></span></div><span class="small muted">${k.ms} ms</span>`}</td>
+        <td class="num small">${k.tin||k.tout ? `${k.tin.toLocaleString()} / ${k.tout.toLocaleString()}` : '—'}</td><td class="num">${fmtc(cost)}</td><td class="num">${fmtc(cum)}</td></tr>`; }).join('')}
+      </tbody></table></div><p class="small muted" style="margin-top:8px">${costLine(c)}. Automated steps took ${(span/1000).toFixed(1)} s in total.</p></section>`;
+  }
+  $('#view').innerHTML = `
+  <div class="pagehead"><div><span class="eyebrow">Reporting · for engineering and operations</span><h1>Agent observability</h1>
+    <p>Every agent step, tool call and human decision, with its latency, tokens and cost, joined to the Salesforce case, FLOW record, ClickUp task and Slack alert it touched. Values are simulated from this session.</p></div></div>
+  ${W.length ? `
+  <div class="kpis">
+    <div class="kpi"><span>Steps traced</span><strong>${allSteps.length}</strong><span class="small">Across ${W.length} cases</span></div>
+    <div class="kpi"><span>Handoffs between agents and people</span><strong>${handoffs}</strong><span class="small">Coordinated by the workflow</span></div>
+    <div class="kpi"><span>Actions without a human decision</span><strong>0</strong><span class="small">Every write followed an approval</span></div>
+    <div class="kpi"><span>Linked work items</span><strong>${cu + sl}</strong><span class="small">${cu} ClickUp · ${sl} Slack</span></div>
+  </div>
+  <section class="panel"><header><h2>Agents and services</h2><span class="small muted">This session</span></header>
+    <div class="tablewrap"><table><thead><tr><th scope="col">Component</th><th scope="col">Type</th><th scope="col" class="num">Runs</th><th scope="col" class="num">Avg latency</th><th scope="col" class="num">Tokens in / out</th><th scope="col" class="num">API calls</th><th scope="col" class="num">Cost</th></tr></thead><tbody>
+    ${Object.entries(agents).sort((a,b)=>b[1].cost-a[1].cost).map(([n,a]) => `<tr><td>${esc(n)}</td><td><span class="tag ${a.kind}">${a.kind}</span></td><td class="num">${a.runs}</td><td class="num">${Math.round(a.ms/a.runs)} ms</td><td class="num">${a.tin||a.tout?`${a.tin.toLocaleString()} / ${a.tout.toLocaleString()}`:'—'}</td><td class="num">${a.calls||'—'}</td><td class="num">${fmtc(a.cost)}</td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="small muted" style="margin-top:8px">Coordinator and Rules are plain code, so they cost almost nothing. Latency and tokens are simulated values for the demo.</p></section>
+  ${wf}` : emptyDemo('trace view')}
+  ${ratesPanel()}
+  <section class="panel"><h2>How traceability works</h2><div class="grid3 small" style="margin-top:8px">
+    <div class="stack"><h3>One ID end to end</h3><p>Each case gets a trace ID that every agent, adapter and human decision records, so one search finds the full story.</p></div>
+    <div class="stack"><h3>Work lands where teams work</h3><p>Sync defects and incidents become ClickUp tasks for engineering; urgent failures alert Slack. Salesforce stays the record for the case.</p></div>
+    <div class="stack"><h3>Audit, not just logs</h3><p>Approvals record who approved which draft and evidence. Traces are append-only on the server, with retention agreed with Compliance.</p></div>
+  </div></section>`;
+  bindRates(viewObs); bindEmpty();
+  const oc = $('#obs-case'); if (oc) oc.onchange = () => { S.obsSel = oc.value; viewObs(); const n = $('#obs-case'); if (n) n.focus(); };
+}
+
+/* ---------- Global controls ---------- */
+const prefs = store.get('care-ops-prefs') || {lg:false, hc:false};
+function applyPrefs(){ document.documentElement.classList.toggle('lg', prefs.lg); document.documentElement.classList.toggle('hc', prefs.hc);
+  $('#t-large').setAttribute('aria-pressed', prefs.lg); $('#t-contrast').setAttribute('aria-pressed', prefs.hc); }
+$('#t-large').onclick = () => { prefs.lg = !prefs.lg; store.set('care-ops-prefs', prefs); applyPrefs(); };
+$('#t-contrast').onclick = () => { prefs.hc = !prefs.hc; store.set('care-ops-prefs', prefs); applyPrefs(); };
+$('#t-reset').onclick = () => { clearTimers(); stopGuide(true); if ($('#dlg').open) $('#dlg').close(); if ('speechSynthesis' in window) speechSynthesis.cancel(); const g = S.gen + 1; S = fresh(); S.gen = g; lastRoute = null; route(); toast('Demo reset. All cases are new again.'); };
+new MutationObserver(() => $$('.tablewrap:not([tabindex])').forEach(t => { t.tabIndex = 0; t.setAttribute('role','region'); const h = t.closest('section')?.querySelector('h2,h3'); t.setAttribute('aria-label', (h ? h.textContent.trim() : 'Table') + ' (scrollable)'); })).observe($('#view'), {childList:true, subtree:true});
+applyPrefs(); route();
+})();
+</script>
